@@ -1,23 +1,24 @@
 import React, { useState } from "react";
-import { 
-  Bot, 
-  Sparkles, 
-  Layers, 
-  ArrowRight, 
-  ShieldCheck, 
-  Cpu, 
-  Fingerprint, 
+import {
+  Layers,
+  ShieldCheck,
+  Cpu,
+  Fingerprint,
   RefreshCw,
-  Terminal
+  Terminal,
+  Sun,
+  Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface LoginPageProps {
   onGoogleSignIn: () => Promise<void>;
   onSandboxBypass: () => Promise<void>;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
 }
 
-export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPageProps) {
+export default function LoginPage({ onGoogleSignIn, onSandboxBypass, theme, onToggleTheme }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [isBtnClicking, setIsBtnClicking] = useState(false);
 
@@ -31,28 +32,46 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
   };
 
   return (
-    <div 
-      className="min-h-screen bg-slate-950 text-slate-100 font-sans flex items-center justify-center p-4 relative overflow-hidden selection:bg-indigo-500/30 selection:text-white"
+    <div
+      className="min-h-screen font-sans flex items-center justify-center p-4 relative overflow-hidden dossier-grid"
+      style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}
       id="login-page-container"
     >
-      {/* Decorative ambient background assets */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-500/5 blur-[120px] pointer-events-none" />
-      
-      {/* Technical coordinate lines */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-35" />
+      {/* Theme toggle */}
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        id="login-theme-toggle"
+        className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center border transition-all cursor-pointer"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }}
+        aria-label="Toggle light and dark mode"
+        title="Toggle light / dark mode"
+      >
+        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
+      {/* Decorative ambient washes */}
+      <div
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none blur-[120px]"
+        style={{ backgroundColor: "var(--accent-soft)", opacity: 0.6 }}
+      />
+      <div
+        className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none blur-[120px]"
+        style={{ backgroundColor: "var(--secondary-soft)", opacity: 0.6 }}
+      />
 
       <div className="max-w-md w-full relative z-10 space-y-6">
-        
+
         {/* Logo and Brand Heading */}
         <div className="text-center space-y-2.5">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.8, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 items-center justify-center shadow-2xl shadow-indigo-500/10 mb-2 border border-indigo-400/25"
+            className="inline-flex w-12 h-12 rounded-xl items-center justify-center shadow-xl mb-2 border"
+            style={{ backgroundColor: "var(--accent)", borderColor: "var(--accent-strong)" }}
           >
-            <Layers size={22} className="text-white" />
+            <Layers size={22} style={{ color: "var(--accent-contrast)" }} />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 5 }}
@@ -60,11 +79,16 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
             transition={{ duration: 0.5, delay: 0.1 }}
             className="space-y-1.5"
           >
-            <span className="text-[10px] font-bold font-mono tracking-[0.25em] text-indigo-400 uppercase block">MULTI-AGENT TALENT HUD</span>
-            <h1 className="text-2xl font-bold font-sans tracking-tight text-white sm:text-3xl">
+            <span
+              className="text-[10px] font-semibold font-mono tracking-[0.25em] uppercase block"
+              style={{ color: "var(--secondary)" }}
+            >
+              Multi-Agent Talent Dossier
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>
               Continuous Career Agent
             </h1>
-            <p className="text-slate-400 text-xs font-sans max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs font-sans max-w-sm mx-auto leading-relaxed" style={{ color: "var(--text-muted)" }}>
               An autonomous multi-agent partner that conducts technical profiling, coordinates market discovery, and automates outreach templates.
             </p>
           </motion.div>
@@ -75,32 +99,35 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-slate-900 border border-slate-850 rounded-2xl shadow-2xl overflow-hidden relative"
+          className="rounded-2xl shadow-2xl overflow-hidden relative border blueprint-corners"
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
           id="auth-card"
         >
-          {/* Subtle neon indicator top border */}
-          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-teal-400 opacity-80" />
+          {/* Brass top rule */}
+          <div className="absolute top-0 inset-x-0 h-[2px]" style={{ backgroundColor: "var(--accent)", opacity: 0.8 }} />
 
           {/* Unified Sign In vs Sign Up Tabs */}
-          <div className="flex bg-slate-950/80 p-1 border-b border-slate-850">
+          <div className="flex p-1 border-b" style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}>
             <button
               onClick={() => setActiveTab("signin")}
-              className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider font-mono rounded-xl transition-all cursor-pointer ${
+              className="flex-1 py-3 text-center text-xs font-semibold uppercase tracking-wider font-mono rounded-lg transition-all cursor-pointer"
+              style={
                 activeTab === "signin"
-                  ? "bg-slate-900 text-slate-100 border border-slate-800"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
+                  ? { backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }
+                  : { color: "var(--text-faint)" }
+              }
               id="tab-select-signin"
             >
               Sign In
             </button>
             <button
               onClick={() => setActiveTab("signup")}
-              className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider font-mono rounded-xl transition-all cursor-pointer ${
+              className="flex-1 py-3 text-center text-xs font-semibold uppercase tracking-wider font-mono rounded-lg transition-all cursor-pointer"
+              style={
                 activeTab === "signup"
-                  ? "bg-slate-900 text-slate-100 border border-slate-800"
-                  : "text-slate-500 hover:text-slate-300"
-              }`}
+                  ? { backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }
+                  : { color: "var(--text-faint)" }
+              }
               id="tab-select-signup"
             >
               Sign Up
@@ -119,26 +146,29 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
                   className="space-y-4"
                 >
                   <div className="space-y-1.5">
-                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                      <Fingerprint size={15} className="text-indigo-400" /> Welcome Back
+                    <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
+                      <Fingerprint size={15} style={{ color: "var(--secondary)" }} /> Welcome Back
                     </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                    <p className="text-xs leading-relaxed font-sans" style={{ color: "var(--text-muted)" }}>
                       Connect your secure Google identity to query your persistent Firestore capability mapping and view active scouting channels.
                     </p>
                   </div>
 
                   {/* Core capability pointers */}
-                  <div className="bg-slate-950/50 border border-slate-850/50 rounded-xl p-3.5 space-y-2 text-[11px] text-slate-400 font-mono">
+                  <div
+                    className="rounded-xl p-3.5 space-y-2 text-[11px] font-mono border"
+                    style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)", color: "var(--text-muted)" }}
+                  >
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                       <span>Resume past conversational logs</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                       <span>Access indexed job matching feeds</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                       <span>Retain personalized outreach drafts</span>
                     </div>
                   </div>
@@ -147,11 +177,12 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
                     <button
                       onClick={handleSignInAction}
                       disabled={isBtnClicking}
-                      className="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-white/5 active:scale-[0.99] disabled:opacity-50"
+                      className="w-full font-semibold py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-wider cursor-pointer active:scale-[0.99] disabled:opacity-50"
+                      style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                       id="google-signin-btn"
                     >
                       {isBtnClicking ? (
-                        <RefreshCw size={14} className="animate-spin text-slate-950" />
+                        <RefreshCw size={14} className="animate-spin" />
                       ) : (
                         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                           <path
@@ -186,26 +217,29 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
                   className="space-y-4"
                 >
                   <div className="space-y-1.5">
-                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                      <Cpu size={15} className="text-teal-400" /> Let's Register Your Profile
+                    <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
+                      <Cpu size={15} style={{ color: "var(--secondary)" }} /> Let's Register Your Profile
                     </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                    <p className="text-xs leading-relaxed font-sans" style={{ color: "var(--text-muted)" }}>
                       Start your technical profiling onboarding with Agent 1. Establish secure, database-linked records instantly.
                     </p>
                   </div>
 
                   {/* Core capability pointers */}
-                  <div className="bg-slate-950/50 border border-slate-850/50 rounded-xl p-3.5 space-y-2 text-[11px] text-slate-400 font-mono">
+                  <div
+                    className="rounded-xl p-3.5 space-y-2 text-[11px] font-mono border"
+                    style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)", color: "var(--text-muted)" }}
+                  >
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-teal-400 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--secondary)" }} />
                       <span>Instantly link profiling metrics</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-teal-400 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--secondary)" }} />
                       <span>Activate autonomous search criteria</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-teal-400 rounded-full" />
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--secondary)" }} />
                       <span>Unlock AI portfolio branding tools</span>
                     </div>
                   </div>
@@ -214,11 +248,12 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
                     <button
                       onClick={handleSignInAction}
                       disabled={isBtnClicking}
-                      className="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-white/5 active:scale-[0.99] disabled:opacity-50"
+                      className="w-full font-semibold py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-wider cursor-pointer active:scale-[0.99] disabled:opacity-50"
+                      style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                       id="google-signup-btn"
                     >
                       {isBtnClicking ? (
-                        <RefreshCw size={14} className="animate-spin text-slate-950" />
+                        <RefreshCw size={14} className="animate-spin" />
                       ) : (
                         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                           <path
@@ -248,25 +283,26 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
 
             {/* Direct Sandbox Bypass option */}
             <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-slate-850/60" />
-              <span className="flex-shrink mx-3 text-[9px] text-slate-500 font-mono tracking-wider uppercase">or bypass auth</span>
-              <div className="flex-grow border-t border-slate-850/60" />
+              <div className="flex-grow border-t" style={{ borderColor: "var(--border)" }} />
+              <span className="flex-shrink mx-3 text-[9px] font-mono tracking-wider uppercase" style={{ color: "var(--text-faint)" }}>or bypass auth</span>
+              <div className="flex-grow border-t" style={{ borderColor: "var(--border)" }} />
             </div>
 
             <div className="pt-0.5">
               <button
                 type="button"
                 onClick={onSandboxBypass}
-                className="w-full bg-slate-950 hover:bg-slate-900 border border-slate-850 text-slate-350 font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[11px] font-mono tracking-wide cursor-pointer active:scale-[0.99]"
+                className="w-full font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[11px] font-mono tracking-wide cursor-pointer active:scale-[0.99] border"
+                style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)", color: "var(--text-muted)" }}
                 id="sandbox-bypass-btn"
               >
-                <Terminal size={12} className="text-teal-400 group-hover:text-teal-300 transition-colors" />
+                <Terminal size={12} style={{ color: "var(--secondary)" }} />
                 <span>Launch Local Sandbox Session</span>
               </button>
             </div>
 
             {/* Sandbox Notice / Popup Warning */}
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed text-center">
+            <p className="text-[10px] font-sans leading-relaxed text-center" style={{ color: "var(--text-faint)" }}>
               Note: Popups are secure. If internal workspace cookies restrict google sign-in inside the preview frame, our secure local developer environment bypass activates automatically.
             </p>
           </div>
@@ -277,9 +313,10 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex justify-center items-center gap-1.5 text-[10px] text-slate-500 font-mono"
+          className="flex justify-center items-center gap-1.5 text-[10px] font-mono"
+          style={{ color: "var(--text-faint)" }}
         >
-          <ShieldCheck size={13} className="text-indigo-500/60" />
+          <ShieldCheck size={13} style={{ color: "var(--secondary)" }} />
           <span>AES-256 SECURED VIA FIREBASE CLOUD SHIELD</span>
         </motion.div>
       </div>

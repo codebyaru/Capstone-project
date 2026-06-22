@@ -1,11 +1,179 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-html, body, #root {
-  background-color: #020617; /* Slate-950 */
-  color: #f1f5f9; /* Slate-100 */
+/* ============================================================
+   THE ARCHITECT'S DOSSIER — token system
+   A blueprint/dossier aesthetic: warm paper or deep ink ground,
+   a single brass accent for action, a quiet teal for "alive/
+   verified" states. No indigo, no generic dark-mode purple.
+   ============================================================ */
+
+:root {
+  /* --- Light: "Paper" --- */
+  --bg: #F1ECDF;
+  --bg-raised: #FAF7EF;
+  --bg-sunken: #E5DDC7;
+  --surface: #FFFFFF;
+  --surface-2: #F7F2E6;
+  --border: #D9CFB2;
+  --border-strong: #B7A87D;
+  --text: #1E1B14;
+  --text-muted: #5B5640;
+  --text-faint: #8C8569;
+
+  --accent: #93702A;
+  /* brass */
+  --accent-strong: #6F551F;
+  --accent-soft: #EBDFB9;
+  --accent-contrast: #FFFEFB;
+
+  --secondary: #1E5C52;
+  /* dossier teal */
+  --secondary-strong: #14433B;
+  --secondary-soft: #DCEAE5;
+
+  --success: #2E7A4F;
+  --success-soft: #DCEFE1;
+  --danger: #9E3B30;
+  --danger-soft: #F3DCD7;
+  --info: #2E5C7A;
+  --info-soft: #DCE9F0;
+
+  --shadow: 30 26 16;
+  --grid-line: 30 26 16;
+}
+
+[data-theme="dark"] {
+  /* --- Dark: "Ink" --- */
+  --bg: #0C0F14;
+  --bg-raised: #11151C;
+  --bg-sunken: #07090C;
+  --surface: #151A22;
+  --surface-2: #1B212B;
+  --border: #2A3140;
+  --border-strong: #3C4456;
+  --text: #ECE7D8;
+  --text-muted: #A19C87;
+  --text-faint: #686252;
+
+  --accent: #D2A94C;
+  --accent-strong: #E9C168;
+  --accent-soft: #2A2210;
+  --accent-contrast: #14110A;
+
+  --secondary: #4CA396;
+  --secondary-strong: #6FBFB3;
+  --secondary-soft: #102420;
+
+  --success: #4CAE76;
+  --success-soft: #0F2418;
+  --danger: #E07A6C;
+  --danger-soft: #2A1612;
+  --info: #6FA8CB;
+  --info-soft: #11212C;
+
+  --shadow: 0 0 0;
+  --grid-line: 255 255 255;
+}
+
+html,
+body,
+#root {
+  background-color: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
   max-width: 100vw;
   margin: 0;
   padding: 0;
 }
 
+body {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 8px;
+}
+
+/* Faint architect's grid — used as an ambient backdrop, not decoration */
+.dossier-grid {
+  background-image:
+    linear-gradient(to right, rgba(var(--grid-line), 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--grid-line), 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Signature element: blueprint corner ticks on primary dossier panels */
+.blueprint-corners {
+  position: relative;
+}
+
+.blueprint-corners::before,
+.blueprint-corners::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.blueprint-corners::before {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 4px 0 0 0;
+}
+
+.blueprint-corners::after {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 4px 0;
+}
+
+.font-display {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.01em;
+}
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

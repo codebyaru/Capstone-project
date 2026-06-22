@@ -4,44 +4,29 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
+import {
+  onAuthStateChanged,
+  signInWithPopup,
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "./lib/firebase";
-import { 
-  Bot, 
-  Sparkles, 
-  Briefcase, 
-  ChevronRight, 
-  Layers, 
-  FileText, 
-  Mail, 
-  FileCheck, 
-  RefreshCw, 
-  Compass, 
-  ExternalLink, 
-  CheckCircle2, 
-  Award,
-  Zap,
+import {
+  Bot,
+  Sparkles,
+  ChevronRight,
+  Layers,
+  Mail,
+  FileCheck,
+  RefreshCw,
   Lock,
-  ArrowLeft,
   X,
-  Code2,
-  ListTodo,
   User,
-  Search,
-  Send,
   Sliders,
-  TrendingUp,
-  FileCode,
-  CheckCircle,
-  Clock,
-  HelpCircle
+  Sun,
+  Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import InterviewerChat from "./components/InterviewerChat.tsx";
@@ -52,9 +37,28 @@ export default function App() {
   const [activeStep, setActiveStep] = useState<"interview" | "matches" | "outreach">("interview");
   const [profile, setProfile] = useState<UserCapabilityProfile | null>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
-  
+
   // Auth State & Persistence
   const [user, setUser] = useState<any>(null);
+
+  // Theme: light ("Paper") / dark ("Ink") — persisted, defaults to system preference
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = window.localStorage.getItem("cc_agent_theme");
+    if (stored === "light" || stored === "dark") return stored;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      window.localStorage.setItem("cc_agent_theme", theme);
+    } catch (err) {
+      console.warn("Unable to persist theme preference:", err);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   useEffect(() => {
     // Obtain the secure session token from backend on mount
@@ -127,10 +131,10 @@ export default function App() {
   };
 
   const saveUserDataToFirestore = async (
-    userId: string, 
-    updProfile = profile, 
-    updChatHistory = chatHistory, 
-    updMatches = matches, 
+    userId: string,
+    updProfile = profile,
+    updChatHistory = chatHistory,
+    updMatches = matches,
     updSelected = selectedMatch,
     updProposal = proposalText
   ) => {
@@ -218,12 +222,12 @@ export default function App() {
       console.error("Logout failed:", err);
     }
   };
-  
+
   // Dashboard Matching States (Agent 2)
   const [matches, setMatches] = useState<MatchRecommendation[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchRecommendation | null>(null);
   const [isFetchingMatches, setIsFetchingMatches] = useState(false);
-  
+
   // Outreach States (Agent 3)
   const [proposalText, setProposalText] = useState("");
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
@@ -232,7 +236,7 @@ export default function App() {
   const [oauthToken, setOauthToken] = useState("");
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-  
+
   // Toast notifications
   const [alertInfo, setAlertInfo] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -295,7 +299,7 @@ export default function App() {
     setProfile(newProfile);
     setChatHistory(rawHistory);
     showNotification("Technical Capability Profile Compiled successfully!", "success");
-    
+
     // Automatically transition to Matchmaker Step
     setActiveStep("matches");
 
@@ -329,7 +333,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       showNotification("Using local fallback match index.", "info");
-      
+
       // Fallback listings matching the database schema
       const fallbackMatches: MatchRecommendation[] = [
         {
@@ -421,7 +425,7 @@ export default function App() {
   // Action: Create Google Doc
   const handleCreateGoogleDoc = async () => {
     if (!proposalText) return;
-    
+
     setIsCreatingDoc(true);
     try {
       if (!oauthToken) {
@@ -449,7 +453,7 @@ export default function App() {
       }
     } catch (error: any) {
       console.warn("Doc automation error or using local workspace sandbox:", error.message);
-      
+
       // High craft localized simulation link
       setTimeout(() => {
         setIsCreatingDoc(false);
@@ -495,7 +499,7 @@ export default function App() {
       }
     } catch (error: any) {
       console.warn("Gmail automation error or using simulated mail client:", error.message);
-      
+
       setTimeout(() => {
         setIsCreatingDraft(false);
         showNotification("Tailored Draft formatted! Saved to Gmail clipboard simulation.", "info");
@@ -542,96 +546,111 @@ export default function App() {
     showNotification("Pipeline reset. Return to Chat Interview.", "info");
   };
 
+  // Shared notification toast renderer
+  const renderNotificationToast = () => (
+    <AnimatePresence>
+      {alertInfo && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl max-w-md w-[90%] border"
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+        >
+          <div
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{
+              backgroundColor:
+                alertInfo.type === "success" ? "var(--success)" : alertInfo.type === "error" ? "var(--danger)" : "var(--info)"
+            }}
+          />
+          <p className="text-xs font-mono font-medium flex-1" style={{ color: "var(--text)" }}>{alertInfo.message}</p>
+          <button onClick={() => setAlertInfo(null)} className="cursor-pointer transition-colors" style={{ color: "var(--text-faint)" }}>
+            <X size={14} />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-indigo-500/30 selection:text-white antialiased overflow-x-hidden max-w-full">
-        {/* Floating Notifications */}
-        <AnimatePresence>
-          {alertInfo && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-md w-[90%]"
-            >
-              <div className={`w-2 h-2 rounded-full shrink-0 ${
-                alertInfo.type === "success" ? "bg-emerald-400" : alertInfo.type === "error" ? "bg-red-400" : "bg-blue-400"
-              }`} />
-              <p className="text-xs font-mono font-medium text-slate-200 flex-1">{alertInfo.message}</p>
-              <button onClick={() => setAlertInfo(null)} className="text-slate-400 hover:text-white cursor-pointer transition-colors">
-                <X size={14} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <LoginPage onGoogleSignIn={handleGoogleSignIn} onSandboxBypass={handleTestUserMockLogin} />
+      <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
+        {renderNotificationToast()}
+        <LoginPage
+          onGoogleSignIn={handleGoogleSignIn}
+          onSandboxBypass={handleTestUserMockLogin}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-indigo-500/30 selection:text-white antialiased overflow-x-hidden max-w-full">
-      
-      {/* Floating Notifications */}
-      <AnimatePresence>
-        {alertInfo && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-md w-[90%]"
-          >
-            <div className={`w-2 h-2 rounded-full shrink-0 ${
-              alertInfo.type === "success" ? "bg-emerald-400" : alertInfo.type === "error" ? "bg-red-400" : "bg-blue-400"
-            }`} />
-            <p className="text-xs font-mono font-medium text-slate-200 flex-1">{alertInfo.message}</p>
-            <button onClick={() => setAlertInfo(null)} className="text-slate-400 hover:text-white cursor-pointer transition-colors">
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
+
+      {renderNotificationToast()}
 
       {/* Header */}
-      <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 z-40 gap-3 md:gap-4">
+      <header
+        className="border-b backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 z-40 gap-3 md:gap-4"
+        style={{ backgroundColor: "var(--bg-raised)", borderColor: "var(--border)" }}
+      >
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-            <Layers size={20} className="text-white" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md shrink-0 border"
+            style={{ backgroundColor: "var(--accent)", borderColor: "var(--accent-strong)" }}
+          >
+            <Layers size={20} style={{ color: "var(--accent-contrast)" }} />
           </div>
           <div>
-            <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-100 flex items-center gap-1.5 flex-wrap">
+            <h1 className="text-xs sm:text-sm font-semibold font-display tracking-tight flex items-center gap-1.5 flex-wrap" style={{ color: "var(--text)" }}>
               Continuous Career Agent
-              <span className="text-[10px] text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.2 rounded font-mono font-normal">v2.1</span>
             </h1>
-            <p className="text-[9px] text-slate-400 font-mono tracking-wider hidden sm:block">
-              MULTI-AGENT PIPELINE FOR TALENT EXTRACTION & OUTREACH
-            </p>
           </div>
         </div>
 
         {/* Integration Credentials Section */}
         <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full md:w-auto justify-start md:justify-end">
+
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            id="header-theme-toggle"
+            className="w-8 h-8 rounded-lg flex items-center justify-center border transition-all cursor-pointer shrink-0"
+            style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }}
+            aria-label="Toggle light and dark mode"
+            title="Toggle light / dark mode"
+          >
+            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+
           {/* User Auth Section */}
           {user ? (
-            <div className="flex items-center gap-3 bg-indigo-950/40 border border-indigo-900/30 px-3 py-1.5 rounded-xl shadow-inner">
+            <div
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl border"
+              style={{ backgroundColor: "var(--secondary-soft)", borderColor: "var(--secondary)" }}
+            >
               {user.photoURL ? (
-                <img referrerPolicy="no-referrer" src={user.photoURL} alt={user.displayName || "User"} className="w-5 h-5 rounded-full ring-2 ring-indigo-500/20 shrink-0" />
+                <img referrerPolicy="no-referrer" src={user.photoURL} alt={user.displayName || "User"} className="w-5 h-5 rounded-full shrink-0" style={{ boxShadow: "0 0 0 2px var(--secondary-soft)" }} />
               ) : (
-                <div className="w-5 h-5 rounded-full bg-indigo-900/60 flex items-center justify-center ring-2 ring-indigo-500/20 shrink-0">
-                  <User size={11} className="text-indigo-400" />
+                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--surface)" }}>
+                  <User size={11} style={{ color: "var(--secondary)" }} />
                 </div>
               )}
               <div className="hidden lg:block text-left">
-                <p className="text-[10px] text-slate-250 font-medium truncate max-w-[120px] font-sans leading-none">{user.displayName || user.email}</p>
+                <p className="text-[10px] font-medium truncate max-w-[120px] font-sans leading-none" style={{ color: "var(--text)" }}>{user.displayName || user.email}</p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span className="text-[8px] text-emerald-400 font-mono leading-none">Firestore Link</span>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: "var(--success)" }} />
+                  <span className="text-[8px] font-mono leading-none" style={{ color: "var(--success)" }}>Firestore Link</span>
                 </div>
               </div>
               <button
                 onClick={handleSignOut}
-                className="text-[10px] font-mono text-indigo-300 hover:text-white bg-indigo-900/35 hover:bg-red-950/20 hover:border-red-900/20 border border-indigo-800/25 px-2 py-0.5 rounded transition-all cursor-pointer"
+                className="text-[10px] font-mono px-2 py-0.5 rounded border transition-all cursor-pointer"
+                style={{ color: "var(--secondary)", borderColor: "var(--secondary)", backgroundColor: "var(--surface)" }}
               >
                 Sign out
               </button>
@@ -639,7 +658,8 @@ export default function App() {
           ) : (
             <button
               onClick={handleGoogleSignIn}
-              className="text-xs bg-indigo-650 hover:bg-indigo-600 text-white font-medium py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-indigo-600/10 active:scale-[0.98]"
+              className="text-xs font-medium py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
+              style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
             >
               <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                 <path d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.529-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.107C18.251 1.708 15.538 1 12.24 1 5.48 1 0 6.48 0 13.2s5.48 12.2 12.24 12.2c7.055 0 11.75-4.96 11.75-11.95 0-.805-.085-1.42-.185-1.995l-11.565-.17z" />
@@ -648,36 +668,47 @@ export default function App() {
             </button>
           )}
 
-          <div className="hidden md:flex items-center bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5 gap-2 text-xs">
-            <Lock size={12} className="text-slate-400" />
-            <input 
+          <div
+            className="hidden md:flex items-center border rounded-lg px-2.5 py-1.5 gap-2 text-xs"
+            style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}
+          >
+            <Lock size={12} style={{ color: "var(--text-faint)" }} />
+            <input
               id="google-workspace-token-input"
-              type="password" 
+              type="password"
               placeholder="Google Workspace Token"
               value={oauthToken}
               onChange={(e) => setOauthToken(e.target.value)}
-              className="bg-transparent text-slate-200 placeholder-slate-500 text-[11px] font-mono focus:outline-none w-40"
+              className="bg-transparent placeholder-current text-[11px] font-mono focus:outline-none w-40"
+              style={{ color: "var(--text)" }}
               title="Enter your Access Token to interface with Gmail/Docs APIs directly"
             />
-            <span className="text-[10px] bg-indigo-950 text-indigo-400 rounded px-1.5 font-mono border border-indigo-900/30">OAuth</span>
+            <span
+              className="text-[10px] rounded px-1.5 font-mono border"
+              style={{ color: "var(--secondary)", backgroundColor: "var(--secondary-soft)", borderColor: "var(--secondary)" }}
+            >
+              OAuth
+            </span>
           </div>
 
           {!profile && (
             <button
               onClick={handleLoadDemoProfile}
-              className="text-xs bg-slate-900 hover:bg-slate-850 hover:text-white border border-slate-800 text-slate-300 py-1.5 px-2.5 sm:px-3.5 rounded-lg flex items-center gap-1.5 transition-all font-medium cursor-pointer"
+              className="text-xs border py-1.5 px-2.5 sm:px-3.5 rounded-lg flex items-center gap-1.5 transition-all font-medium cursor-pointer"
+              style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }}
               title="Demo Sandbox"
             >
-              <Sparkles size={12} className="text-indigo-400" />
+              <Sparkles size={12} style={{ color: "var(--accent)" }} />
               <span className="hidden sm:inline">Demo sandbox</span>
             </button>
           )}
 
           {profile && (
-            <button 
+            <button
               id="btn-nav-reset"
               onClick={handleRestartPipeline}
-              className="text-xs bg-slate-900 hover:bg-slate-850 border border-slate-850 text-slate-300 py-1.5 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="text-xs border py-1.5 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }}
               title="Reset Profile"
             >
               <RefreshCw size={12} />
@@ -689,36 +720,44 @@ export default function App() {
 
       {/* Main Workspace Stage */}
       <div className="flex-1 flex flex-col lg:flex-row">
-        
+
         {/* Workspace Sidebar - Steps Selector */}
-        <aside className="w-full lg:w-72 bg-slate-950 border-b lg:border-b-0 lg:border-r border-slate-900/80 p-5 md:p-6 flex flex-col gap-6 shrink-0">
+        <aside
+          className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r p-5 md:p-6 flex flex-col gap-6 shrink-0"
+          style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}
+        >
           <div className="space-y-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Pipeline steps</h3>
-            <p className="text-[11px] text-slate-500">Sequentially transition from profiling to automation</p>
+            <h3 className="text-xs font-semibold uppercase tracking-wider font-mono" style={{ color: "var(--text-muted)" }}>Pipeline steps</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:flex-col gap-2">
-            
+
             {/* Step 1 Tab button */}
             <button
               id="tab-step-1"
               onClick={() => setActiveStep("interview")}
-              className={`flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border ${
+              className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
+              style={
                 activeStep === "interview"
-                  ? "bg-indigo-600/10 border-indigo-500/30 text-white shadow-sm"
-                  : "bg-transparent border-transparent hover:bg-slate-900/40 text-slate-400 hover:text-slate-200"
-              }`}
+                  ? { backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--text)" }
+                  : { backgroundColor: "transparent", borderColor: "transparent", color: "var(--text-faint)" }
+              }
             >
-              <div className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
-                activeStep === "interview" ? "bg-indigo-600 text-white" : "bg-slate-900 text-slate-500"
-              }`}>
+              <div
+                className="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-semibold shrink-0"
+                style={
+                  activeStep === "interview"
+                    ? { backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }
+                    : { backgroundColor: "var(--bg-sunken)", color: "var(--text-faint)" }
+                }
+              >
                 01
               </div>
               <div className="min-w-0">
-                <span className="text-[11px] font-mono font-bold text-indigo-400 uppercase tracking-widest block">Agent 1</span>
-                <span className="text-xs font-semibold block">AI Chat Interview</span>
-                <span className="text-[10px] text-slate-500 font-mono mt-0.5 block truncate">
-                  {profile ? "✓ Profile compiled" : "Profiling active"}
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-widest block" style={{ color: "var(--secondary)" }}>Agent 1</span>
+                <span className="text-xs font-semibold block" style={{ color: "var(--text)" }}>AI Chat Interview</span>
+                <span className="text-[10px] font-mono mt-0.5 block truncate" style={{ color: "var(--text-faint)" }}>
+                  {profile ? "✓ Compiled" : "Active"}
                 </span>
               </div>
             </button>
@@ -727,22 +766,28 @@ export default function App() {
             <button
               id="tab-step-2"
               onClick={() => setActiveStep("matches")}
-              className={`flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border ${
+              className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
+              style={
                 activeStep === "matches"
-                  ? "bg-indigo-600/10 border-indigo-500/30 text-white shadow-sm"
-                  : "bg-transparent border-transparent hover:bg-slate-900/40 text-slate-400 hover:text-slate-200"
-              }`}
+                  ? { backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--text)" }
+                  : { backgroundColor: "transparent", borderColor: "transparent", color: "var(--text-faint)" }
+              }
             >
-              <div className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
-                activeStep === "matches" ? "bg-indigo-600 text-white" : "bg-slate-900 text-slate-500"
-              }`}>
+              <div
+                className="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-semibold shrink-0"
+                style={
+                  activeStep === "matches"
+                    ? { backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }
+                    : { backgroundColor: "var(--bg-sunken)", color: "var(--text-faint)" }
+                }
+              >
                 02
               </div>
               <div className="min-w-0">
-                <span className="text-[11px] font-mono font-bold text-indigo-400 uppercase tracking-widest block">Agent 2</span>
-                <span className="text-xs font-semibold block">Market Matching</span>
-                <span className="text-[10px] text-slate-500 font-mono mt-0.5 block truncate">
-                  {matches.length > 0 ? `${matches.length} matches discovered` : "Onboarding pending"}
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-widest block" style={{ color: "var(--secondary)" }}>Agent 2</span>
+                <span className="text-xs font-semibold block" style={{ color: "var(--text)" }}>Market Matching</span>
+                <span className="text-[10px] font-mono mt-0.5 block truncate" style={{ color: "var(--text-faint)" }}>
+                  {matches.length > 0 ? `${matches.length} matches` : "Pending"}
                 </span>
               </div>
             </button>
@@ -751,58 +796,39 @@ export default function App() {
             <button
               id="tab-step-3"
               onClick={() => setActiveStep("outreach")}
-              className={`flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border ${
+              className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
+              style={
                 activeStep === "outreach"
-                  ? "bg-indigo-600/10 border-indigo-500/30 text-white shadow-sm"
-                  : "bg-transparent border-transparent hover:bg-slate-900/40 text-slate-400 hover:text-slate-200"
-              }`}
+                  ? { backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--text)" }
+                  : { backgroundColor: "transparent", borderColor: "transparent", color: "var(--text-faint)" }
+              }
             >
-              <div className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
-                activeStep === "outreach" ? "bg-indigo-600 text-white" : "bg-slate-900 text-slate-500"
-              }`}>
+              <div
+                className="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-semibold shrink-0"
+                style={
+                  activeStep === "outreach"
+                    ? { backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }
+                    : { backgroundColor: "var(--bg-sunken)", color: "var(--text-faint)" }
+                }
+              >
                 03
               </div>
               <div className="min-w-0">
-                <span className="text-[11px] font-mono font-bold text-indigo-400 uppercase tracking-widest block">Agent 3</span>
-                <span className="text-xs font-semibold block">Proposals & Hub</span>
-                <span className="text-[10px] text-slate-500 font-mono mt-0.5 block truncate">
-                  {proposalText ? "proposal ready" : "no proposal drafted"}
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-widest block" style={{ color: "var(--secondary)" }}>Agent 3</span>
+                <span className="text-xs font-semibold block" style={{ color: "var(--text)" }}>Proposals & Hub</span>
+                <span className="text-[10px] font-mono mt-0.5 block truncate" style={{ color: "var(--text-faint)" }}>
+                  {proposalText ? "Ready" : "Pending"}
                 </span>
               </div>
             </button>
 
           </div>
-
-          {/* Active Work State Visualizer */}
-          <div className="bg-slate-900/50 border border-slate-900/80 rounded-xl p-4 mt-auto space-y-3.5 hidden sm:block lg:block">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 block">Agent Pipeline Metric</span>
-            <div className="space-y-2">
-              <div className="flex justify-between text-[11px] font-mono">
-                <span className="text-slate-400">Profile Extraction</span>
-                <span className={profile ? "text-emerald-400" : "text-slate-500"}>{profile ? "Ready" : "Pending"}</span>
-              </div>
-              <div className="flex justify-between text-[11px] font-mono">
-                <span className="text-slate-400">Market Scouting</span>
-                <span className={matches.length > 0 ? "text-emerald-400" : "text-slate-500"}>{matches.length > 0 ? "Indexed" : "Pending"}</span>
-              </div>
-              <div className="flex justify-between text-[11px] font-mono">
-                <span className="text-slate-400">Outreach Drafting</span>
-                <span className={proposalText ? "text-emerald-400" : "text-slate-500"}>{proposalText ? "Drafted" : "Pending"}</span>
-              </div>
-            </div>
-            <div className="h-[2px] bg-slate-950 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-500" 
-                style={{ width: profile ? (proposalText ? "100%" : "66%") : "15%" }}
-              />
-            </div>
-          </div>
         </aside>
 
         {/* Dynamic Canvas Area */}
-        <main className="flex-1 bg-slate-950 p-6 md:p-8 flex flex-col overflow-x-hidden">
+        <main className="flex-1 p-6 md:p-8 flex flex-col overflow-x-hidden" style={{ backgroundColor: "var(--bg)" }}>
           <AnimatePresence mode="wait">
-            
+
             {/* Step 1 View: Chat Interview Panel */}
             {activeStep === "interview" && (
               <motion.div
@@ -813,24 +839,22 @@ export default function App() {
                 transition={{ duration: 0.2 }}
                 className="space-y-6 max-w-4xl"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5" style={{ borderColor: "var(--border)" }}>
                   <div>
-                    <h2 className="text-xl font-bold text-white tracking-tight">Agent 1: Interactive System Architect Profiler</h2>
-                    <p className="text-slate-400 text-xs mt-1">
-                      Resume text files mask true engineering mastery. Author custom answers to map your stack depth and architectural principles.
-                    </p>
+                    <h2 className="text-xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>Agent 1: System Architect Profiler</h2>
                   </div>
                   {!profile && (
                     <button
                       onClick={handleLoadDemoProfile}
-                      className="shrink-0 text-xs bg-indigo-600/10 border border-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg hover:bg-indigo-600/20 transition-all font-mono"
+                      className="shrink-0 text-xs py-1.5 px-3 rounded-lg transition-all font-mono border"
+                      style={{ backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-strong)" }}
                     >
-                      💡 Load Sandboxed Demo Profile
+                      Load Sandboxed Demo Profile
                     </button>
                   )}
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
                   <InterviewerChat onProfileGenerated={handleProfileGenerated} />
                 </div>
               </motion.div>
@@ -846,28 +870,26 @@ export default function App() {
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                <div className="border-b border-slate-900 pb-5">
-                  <h2 className="text-xl font-bold text-white tracking-tight">Agent 2: Real-time Vector Market Scout</h2>
-                  <p className="text-slate-400 text-xs mt-1">
-                    Your compiled Engineering Profile is passed through multi-agent similarity score models to map you directly onto active roles.
-                  </p>
+                <div className="border-b pb-5" style={{ borderColor: "var(--border)" }}>
+                  <h2 className="text-xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>Agent 2: Market Scout</h2>
                 </div>
 
                 {!profile ? (
                   // Empty State Placeholder
-                  <div className="border border-dashed border-slate-800 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center mx-auto text-slate-500">
+                  <div className="border border-dashed rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4" style={{ borderColor: "var(--border-strong)" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ backgroundColor: "var(--bg-sunken)", color: "var(--text-faint)" }}>
                       <Lock size={20} />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-sm font-bold text-slate-300">Engineering Profile Required</h3>
-                      <p className="text-xs text-slate-500 leading-relaxed">
+                      <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Engineering Profile Required</h3>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
                         You first need to complete the Step 1 AI Interview, or instantly load our premium sandboxed profile to see matching metrics in action.
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={handleLoadDemoProfile}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      className="font-medium text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                     >
                       Instant Demo Seeding
                     </button>
@@ -875,17 +897,16 @@ export default function App() {
                 ) : (
                   // Matches Loaded Workspace
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                                    {/* Left Column: Matches list */}
+                    {/* Left Column: Matches list */}
                     <div className="lg:col-span-8 space-y-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <span className="text-xs font-mono text-indigo-400 uppercase font-bold tracking-widest block">Active Scout Listings</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Select a listing to generate outreach drafts</span>
+                        <span className="text-xs font-mono font-semibold uppercase tracking-widest block" style={{ color: "var(--secondary)" }}>Active Scout Listings</span>
                       </div>
 
                       {isFetchingMatches ? (
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl h-80 flex flex-col items-center justify-center gap-3">
-                          <RefreshCw size={24} className="text-indigo-400 animate-spin" />
-                          <span className="text-xs text-slate-400 font-mono text-center px-4">Running vector similarity mapping on current dataset...</span>
+                        <div className="rounded-2xl h-80 flex flex-col items-center justify-center gap-3 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+                          <RefreshCw size={24} className="animate-spin" style={{ color: "var(--accent)" }} />
+                          <span className="text-xs font-mono text-center px-4" style={{ color: "var(--text-muted)" }}>Running vector similarity mapping on current dataset...</span>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -899,38 +920,42 @@ export default function App() {
                                   setSelectedMatch(match);
                                   handleDraftProposalForMatch(profile, match);
                                 }}
-                                className={`group p-5 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between min-h-[14rem] h-auto gap-4 ${
+                                className="group p-5 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between min-h-[14rem] h-auto gap-4"
+                                style={
                                   isSelected
-                                    ? "bg-slate-900 border-indigo-500/50 shadow-lg shadow-indigo-500/5"
-                                    : "bg-slate-900/40 border-slate-900 hover:bg-slate-900 hover:border-slate-800"
-                                }`}
+                                    ? { backgroundColor: "var(--surface)", borderColor: "var(--accent)" }
+                                    : { backgroundColor: "var(--bg-raised)", borderColor: "var(--border)" }
+                                }
                               >
                                 <div>
                                   <div className="flex justify-between items-start gap-3">
-                                    <span className="text-[10px] font-mono font-bold text-slate-400 truncate max-w-[80%] block group-hover:text-slate-300">
+                                    <span className="text-[10px] font-mono font-semibold truncate max-w-[80%] block" style={{ color: "var(--text-faint)" }}>
                                       {match.companyName}
                                     </span>
-                                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                                      match.matchScore >= 95
-                                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                        : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                                    }`}>
+                                    <span
+                                      className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded shrink-0 border"
+                                      style={
+                                        match.matchScore >= 95
+                                          ? { backgroundColor: "var(--success-soft)", color: "var(--success)", borderColor: "var(--success)" }
+                                          : { backgroundColor: "var(--accent-soft)", color: "var(--accent-strong)", borderColor: "var(--accent)" }
+                                      }
+                                    >
                                       {match.matchScore}% Match
                                     </span>
                                   </div>
 
-                                  <h3 className="text-sm font-bold text-slate-100 group-hover:text-indigo-300 transition-colors mt-2.5 line-clamp-2">
+                                  <h3 className="text-sm font-semibold mt-2.5 line-clamp-2" style={{ color: "var(--text)" }}>
                                     {match.title}
                                   </h3>
 
-                                  <p className="text-xs text-slate-400 line-clamp-3 mt-2 font-sans">
+                                  <p className="text-xs line-clamp-3 mt-2 font-sans" style={{ color: "var(--text-muted)" }}>
                                     {match.whyYouMatch}
                                   </p>
                                 </div>
 
-                                <div className="mt-3.5 pt-3 border-t border-slate-850/40 flex flex-wrap gap-1.5">
+                                <div className="mt-3.5 pt-3 border-t flex flex-wrap gap-1.5" style={{ borderColor: "var(--border)" }}>
                                   {match.alignmentHighlights.skillOverlap.slice(0, 3).map((skill, sIdx) => (
-                                    <span key={sIdx} className="text-[9px] bg-slate-950 font-mono px-2 py-0.5 rounded text-indigo-300">
+                                    <span key={sIdx} className="text-[9px] font-mono px-2 py-0.5 rounded" style={{ backgroundColor: "var(--bg-sunken)", color: "var(--secondary)" }}>
                                       {skill}
                                     </span>
                                   ))}
@@ -944,29 +969,29 @@ export default function App() {
 
                     {/* Right Column: In-depth Selection Breakdown */}
                     <div id="scout-breakdown-details-panel" className="lg:col-span-4 space-y-4">
-                      <span className="text-xs font-mono text-indigo-400 uppercase font-bold tracking-widest block">Alignment insights</span>
-                      
+                      <span className="text-xs font-mono font-semibold uppercase tracking-widest block" style={{ color: "var(--secondary)" }}>Alignment insights</span>
+
                       {selectedMatch ? (
-                        <div className="bg-slate-900 border border-slate-850 rounded-2xl p-5 space-y-5">
+                        <div className="rounded-2xl p-5 space-y-5 border blueprint-corners" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
                           <div>
-                            <span className="text-[9px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-bold uppercase">Candidate Alignment</span>
-                            <h3 className="text-base font-bold text-slate-100 mt-2.5">{selectedMatch.title}</h3>
-                            <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedMatch.companyName}</p>
+                            <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded uppercase" style={{ color: "var(--accent-strong)", backgroundColor: "var(--accent-soft)" }}>Candidate Alignment</span>
+                            <h3 className="text-base font-semibold mt-2.5" style={{ color: "var(--text)" }}>{selectedMatch.title}</h3>
+                            <p className="text-xs font-mono mt-0.5" style={{ color: "var(--text-faint)" }}>{selectedMatch.companyName}</p>
                           </div>
 
-                          <div className="space-y-3 pt-3 border-t border-slate-850 text-xs">
+                          <div className="space-y-3 pt-3 border-t text-xs" style={{ borderColor: "var(--border)" }}>
                             <div className="space-y-1">
-                              <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Insight Congruence</span>
-                              <p className="text-slate-300 leading-relaxed font-sans text-xs bg-slate-950/40 p-2.5 border border-slate-850/40 rounded-lg">
+                              <span className="text-[10px] uppercase font-mono tracking-wider block" style={{ color: "var(--text-faint)" }}>Insight Congruence</span>
+                              <p className="leading-relaxed font-sans text-xs p-2.5 border rounded-lg" style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}>
                                 "{selectedMatch.alignmentHighlights.insightCongruence}"
                               </p>
                             </div>
 
                             <div className="space-y-1 pt-1.5">
-                              <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Tech-Stack Overlap</span>
+                              <span className="text-[10px] uppercase font-mono tracking-wider block" style={{ color: "var(--text-faint)" }}>Tech-Stack Overlap</span>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {selectedMatch.alignmentHighlights.skillOverlap.map((sov, sIdx) => (
-                                  <span key={sIdx} className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 text-[10px] font-mono px-2 py-0.5 rounded">
+                                  <span key={sIdx} className="text-[10px] font-mono px-2 py-0.5 rounded border" style={{ backgroundColor: "var(--success-soft)", color: "var(--success)", borderColor: "var(--success)" }}>
                                     + {sov}
                                   </span>
                                 ))}
@@ -976,14 +1001,15 @@ export default function App() {
 
                           <button
                             onClick={() => setActiveStep("outreach")}
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer"
+                            className="w-full font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer"
+                            style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                           >
                             <span>Proceed to Outreach Workspace</span>
                             <ChevronRight size={14} />
                           </button>
                         </div>
                       ) : (
-                        <div className="bg-slate-900 border border-slate-850 rounded-2xl p-5 text-center text-xs text-slate-500 font-mono">
+                        <div className="rounded-2xl p-5 text-center text-xs font-mono border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-faint)" }}>
                           Select an active role on the left to see precise vector overlap breakdowns.
                         </div>
                       )}
@@ -1004,30 +1030,28 @@ export default function App() {
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                <div className="border-b border-slate-900 pb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="border-b pb-5 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ borderColor: "var(--border)" }}>
                   <div>
-                    <h2 className="text-xl font-bold text-white tracking-tight">Agent 3: Proposal Architect & Workspace Hub</h2>
-                    <p className="text-slate-400 text-xs mt-1">
-                      Translates user capabilities directly against high-priority company pain points using target Generative Pitch Templates.
-                    </p>
+                    <h2 className="text-xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>Agent 3: Outreach & Proposals</h2>
                   </div>
                 </div>
 
                 {!profile ? (
                   // Empty State Placeholder
-                  <div className="border border-dashed border-slate-800 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center mx-auto text-slate-500">
+                  <div className="border border-dashed rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4" style={{ borderColor: "var(--border-strong)" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ backgroundColor: "var(--bg-sunken)", color: "var(--text-faint)" }}>
                       <Lock size={20} />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-sm font-bold text-slate-300">Engineering Profile Required</h3>
-                      <p className="text-xs text-slate-500 leading-relaxed">
+                      <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Engineering Profile Required</h3>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--text-faint)" }}>
                         You first need to complete the Step 1 AI Interview, or instantly load our premium sandboxed profile to see generated copywriter cover letters.
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={handleLoadDemoProfile}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      className="font-medium text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                     >
                       Instant Demo Seeding
                     </button>
@@ -1035,31 +1059,31 @@ export default function App() {
                 ) : (
                   // High Fidelity Copywriting Dashboard and Document Preview Workspace
                   <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-                    
+
                     {/* Left Panel: Proposal Blueprint & Match overview */}
                     <div className="xl:col-span-4 space-y-6">
-                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                        <span className="text-[10px] font-bold font-mono tracking-widest text-indigo-400 uppercase block">TARGET OPPORTUNITY</span>
-                        
+                      <div className="rounded-2xl p-5 space-y-4 border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+                        <span className="text-[10px] font-semibold font-mono tracking-widest uppercase block" style={{ color: "var(--secondary)" }}>TARGET OPPORTUNITY</span>
+
                         <div>
-                          <h3 className="text-base font-bold text-white">{selectedMatch?.title || "Choose matching gig"}</h3>
-                          <p className="text-xs text-slate-400 mt-0.5">{selectedMatch?.companyName || "Market scout"}</p>
+                          <h3 className="text-base font-semibold" style={{ color: "var(--text)" }}>{selectedMatch?.title || "Choose matching gig"}</h3>
+                          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{selectedMatch?.companyName || "Market scout"}</p>
                         </div>
 
                         {selectedMatch && (
-                          <div className="space-y-3 pt-3 border-t border-slate-850 text-xs">
+                          <div className="space-y-3 pt-3 border-t text-xs" style={{ borderColor: "var(--border)" }}>
                             <div>
-                              <span className="text-[10px] font-mono text-slate-400 uppercase block">Why You Align</span>
-                              <p className="text-slate-300 font-sans mt-1 leading-relaxed text-xs">
+                              <span className="text-[10px] font-mono uppercase block" style={{ color: "var(--text-faint)" }}>Why You Align</span>
+                              <p className="font-sans mt-1 leading-relaxed text-xs" style={{ color: "var(--text-muted)" }}>
                                 {selectedMatch.whyYouMatch}
                               </p>
                             </div>
 
                             <div className="pt-2">
-                              <span className="text-[10px] font-mono text-slate-400 uppercase block">Shared Stack Alignment</span>
+                              <span className="text-[10px] font-mono uppercase block" style={{ color: "var(--text-faint)" }}>Shared Stack Alignment</span>
                               <div className="flex flex-wrap gap-1 mt-1.5">
                                 {selectedMatch.alignmentHighlights.skillOverlap.map((s, idx) => (
-                                  <span key={idx} className="bg-emerald-500/10 font-mono text-emerald-400 border border-emerald-500/15 text-[10px] px-2 py-0.5 rounded">
+                                  <span key={idx} className="font-mono text-[10px] px-2 py-0.5 rounded border" style={{ backgroundColor: "var(--success-soft)", color: "var(--success)", borderColor: "var(--success)" }}>
                                     ✓ {s}
                                   </span>
                                 ))}
@@ -1069,216 +1093,69 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Workspace credentials warning/info box */}
-                      <div className="bg-slate-900/60 border border-slate-850 rounded-2xl p-5 space-y-3 text-xs leading-relaxed">
-                        <span className="text-[10px] font-bold font-mono tracking-widest text-teal-400 uppercase block">WORKSPACE AUTOMATION HUB</span>
-                        <p className="text-slate-400 text-xs font-sans">
-                          Our Google Workspace Integration instantly targets Gmail drafts and Google Docs creation. Paste your OAuth token in the header field above to bypass the local sandbox simulation.
-                        </p>
-                      </div>
-
-                      {/* AI Technical Brand Portfolio Asset Generator */}
-                      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full"></div>
-                        
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
-                            <Sparkles size={14} />
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold font-mono tracking-widest text-indigo-400 uppercase block">PORTFOLIO BRANDING</span>
-                            <h3 className="text-sm font-bold text-slate-250 mt-0.5">Asset Portfolio Generator</h3>
-                          </div>
-                        </div>
-
-                        <p className="text-slate-400 text-xs leading-relaxed font-sans">
-                          Assemble vector diagrams, schematics, or profile avatars using the premium <code className="text-indigo-300 font-mono text-[10px] bg-indigo-950/40 px-1 py-0.5 rounded">gemini-3-pro-image-preview</code> model.
-                        </p>
-
-                        {/* Prompt Input */}
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Generation Prompt</label>
-                          <textarea
-                            value={imagePrompt}
-                            onChange={(e) => setImagePrompt(e.target.value)}
-                            rows={3}
-                            className="w-full text-xs bg-slate-950 border border-slate-850 rounded-xl p-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 font-sans leading-relaxed resize-none"
-                            placeholder="Describe your desired asset details..."
+                      {/* Workspace credentials / token input */}
+                      <div className="rounded-2xl p-5 space-y-3 text-xs border" style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}>
+                        <span className="text-[10px] font-semibold font-mono tracking-widest uppercase block" style={{ color: "var(--secondary)" }}>WORKSPACE AUTOMATION</span>
+                        <div className="flex items-center border rounded-lg px-2.5 py-2 gap-2 text-xs" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+                          <Lock size={12} style={{ color: "var(--text-faint)" }} />
+                          <input
+                            id="google-workspace-token-input"
+                            type="password"
+                            placeholder="Google Workspace OAuth Token"
+                            value={oauthToken}
+                            onChange={(e) => setOauthToken(e.target.value)}
+                            className="bg-transparent placeholder-current text-xs focus:outline-none flex-1 font-sans"
+                            style={{ color: "var(--text)" }}
+                            title="Enter your Access Token to interface with Gmail/Docs APIs directly"
                           />
                         </div>
-
-                        {/* Presets Grid */}
-                        <div className="space-y-1">
-                          <span className="text-[8px] font-mono uppercase text-slate-500 block">Quick Asset Presets:</span>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setImagePrompt("Minimalist blueprint sketch of a high-throughput API gateway cluster, clean software engineering vector blueprint, glowing cyan slate schematic, diagram architecture")}
-                              className="text-[9px] bg-slate-950/60 border border-slate-800/40 text-slate-450 p-1.5 rounded-lg hover:bg-slate-950 hover:text-slate-200 transition-all text-left font-mono truncate"
-                            >
-                              🌐 Tech Schematic
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setImagePrompt("Iconic corporate avatar, professional software engineer portrait, elegant minimalist profile, high-end clean workspace ambient lighting, dark neon clothing, premium branding")}
-                              className="text-[9px] bg-slate-950/60 border border-slate-800/40 text-slate-450 p-1.5 rounded-lg hover:bg-slate-950 hover:text-slate-200 transition-all text-left font-mono truncate"
-                            >
-                              👤 Pro Avatar Icon
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setImagePrompt("Aesthetic abstract glowing network vertices, server mesh node system web illustration, deep slate background with indigo neon traces, vector design art")}
-                              className="text-[9px] bg-slate-950/60 border border-slate-800/40 text-slate-450 p-1.5 rounded-lg hover:bg-slate-950 hover:text-slate-200 transition-all text-left font-mono truncate"
-                            >
-                              ⚡ Network Abstract
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setImagePrompt("Clean isometric 3D render of a code terminal window with flowing holographic digital metrics, dark teal/carbon background, sleek UI/UX portfolio cover")}
-                              className="text-[9px] bg-slate-950/60 border border-slate-800/40 text-slate-450 p-1.5 rounded-lg hover:bg-slate-950 hover:text-slate-200 transition-all text-left font-mono truncate"
-                            >
-                              💻 Codespace Isometric
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Selectors Grid: Size & Aspect Ratio */}
-                        <div className="grid grid-cols-2 gap-3 pt-1">
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Quality Scale</label>
-                            <div className="flex bg-slate-950 p-0.5 border border-slate-850 rounded-lg gap-0.5">
-                              {["1K", "2K", "4K"].map((s) => (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => setImageSize(s as any)}
-                                  className={`flex-1 text-[9px] font-mono font-bold py-1 rounded transition-all ${
-                                    imageSize === s
-                                      ? "bg-indigo-600/15 border border-indigo-500/20 text-white"
-                                      : "text-slate-500 hover:text-slate-300"
-                                  }`}
-                                >
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Aspect Ratio</label>
-                            <div className="flex bg-slate-950 p-0.5 border border-slate-850 rounded-lg gap-0.5">
-                              {[
-                                { label: "1:1", value: "1:1" },
-                                { label: "16:9", value: "16:9" },
-                              ].map((ar) => (
-                                <button
-                                  key={ar.value}
-                                  type="button"
-                                  onClick={() => setImageAspectRatio(ar.value as any)}
-                                  className={`flex-1 text-[9px] font-mono py-1 rounded transition-all ${
-                                    imageAspectRatio === ar.value
-                                      ? "bg-indigo-600/15 border border-indigo-500/20 text-white font-bold"
-                                      : "text-slate-500 hover:text-slate-300"
-                                  }`}
-                                >
-                                  {ar.value}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Rendering Canvas / Output */}
-                        <div className="space-y-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={handleGenerateAssetImage}
-                            disabled={isGeneratingImage || !imagePrompt.trim()}
-                            className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 text-white font-bold text-[11px] py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-indigo-600/10"
-                          >
-                            {isGeneratingImage ? (
-                              <RefreshCw size={12} className="animate-spin" />
-                            ) : (
-                              <Sparkles size={12} className="text-indigo-200" />
-                            )}
-                            <span>Assemble Asset Image</span>
-                          </button>
-
-                          {/* Generation Preview Stage */}
-                          <div className="relative border border-slate-850 bg-slate-950/80 rounded-xl overflow-hidden min-h-[140px] flex items-center justify-center p-2">
-                            {isGeneratingImage ? (
-                              <div className="text-center space-y-2 p-3">
-                                <RefreshCw size={20} className="text-indigo-500 animate-spin mx-auto" />
-                                <div className="space-y-0.5">
-                                  <span className="text-[9px] font-mono text-indigo-400 uppercase tracking-widest block animate-pulse">Rasterizing Asset Layers</span>
-                                  <span className="text-[8px] font-mono text-slate-500 block">Mapping {imageSize} coordinates via Gemini...</span>
-                                </div>
-                              </div>
-                            ) : generatedImageUrl ? (
-                              <div className="w-full space-y-2 text-center">
-                                <img
-                                  src={generatedImageUrl}
-                                  alt="AI Generated Asset Portfolio"
-                                  referrerPolicy="no-referrer"
-                                  className="w-full object-cover rounded-lg border border-slate-850 max-h-[180px]"
-                                />
-                                <div className="flex items-center justify-between gap-1 text-[8px] font-mono text-slate-500 bg-slate-900/40 p-2 border border-slate-850/40 rounded-lg">
-                                  <span>Engine: <span className="text-indigo-400 font-bold">{imageEngine || "imagen"}</span></span>
-                                  <span>Ratio: {imageAspectRatio} ({imageSize})</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-center p-4 space-y-1 text-slate-500">
-                                <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center mx-auto text-slate-600">
-                                  <Sliders size={12} />
-                                </div>
-                                <span className="text-[9px] font-mono block">No custom asset rendered</span>
-                                <span className="text-[8px] text-slate-600 block max-w-[200px] mx-auto leading-relaxed">Customize properties above & tap "Assemble Asset" to begin render.</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <p className="text-[10px] font-sans leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                          Optional. Add your Google OAuth Token to draft emails/Docs directly to your account.
+                        </p>
                       </div>
                     </div>
 
                     {/* Right Panel: Sleek Live Document Preview Workbench */}
                     <div id="live-workbench-panel" className="xl:col-span-8 space-y-4">
-                      
-                      <div className="bg-slate-900 border border-slate-850 rounded-2xl overflow-hidden shadow-2xl">
-                        
+
+                      <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+
                         {/* Live document header styling mimicking a document program window */}
-                        <div className="bg-slate-850 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 gap-3">
+                        <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b gap-3" style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}>
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded bg-gradient-to-tr from-emerald-400 to-indigo-500 flex items-center justify-center text-white text-xs">
+                            <div className="w-8 h-8 rounded flex items-center justify-center text-xs" style={{ backgroundColor: "var(--secondary)", color: "var(--accent-contrast)" }}>
                               <Bot size={15} />
                             </div>
                             <div>
-                              <div className="text-[9px] text-emerald-400 font-mono uppercase tracking-wider font-bold">
+                              <div className="text-[9px] font-mono uppercase tracking-wider font-semibold" style={{ color: "var(--secondary)" }}>
                                 Agent 3 Outreach Writer
                               </div>
-                              <h4 className="text-xs font-bold text-slate-200">
+                              <h4 className="text-xs font-semibold" style={{ color: "var(--text)" }}>
                                 Live Letter Preview & Automation Stage
                               </h4>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-mono px-2 py-0.5 rounded border border-indigo-500/20">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded border" style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-strong)", borderColor: "var(--accent)" }}>
                               Gemini flash
                             </span>
-                            <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded border" style={{ backgroundColor: "var(--bg)", color: "var(--text-faint)", borderColor: "var(--border)" }}>
                               Outbox target
                             </span>
                           </div>
                         </div>
 
                         {/* Proposal Text box styled elegant / document block */}
-                        <div className="p-6 bg-slate-950/70 border-b border-slate-850">
-                          <div className="bg-slate-900 border border-slate-850 rounded-xl p-5 font-mono text-xs text-slate-300 leading-relaxed min-h-[340px] max-h-[460px] overflow-y-auto whitespace-pre-wrap select-text selection:bg-indigo-500">
+                        <div className="p-6 border-b" style={{ backgroundColor: "var(--bg-raised)", borderColor: "var(--border)" }}>
+                          <div
+                            className="rounded-xl p-8 md:p-10 font-sans text-sm md:text-base leading-relaxed tracking-normal min-h-[340px] max-h-[500px] overflow-y-auto whitespace-pre-wrap select-text border shadow-sm"
+                            style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                          >
                             {isGeneratingProposal ? (
                               <div className="h-full min-h-[280px] flex flex-col items-center justify-center gap-3">
-                                <RefreshCw size={24} className="text-teal-400 animate-spin" />
-                                <span className="text-slate-400 text-xs font-mono">Formulating custom technical proposal content...</span>
+                                <RefreshCw size={24} className="animate-spin" style={{ color: "var(--secondary)" }} />
+                                <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>Formulating custom technical proposal content...</span>
                               </div>
                             ) : (
                               proposalText || "Choose a job opportunity from the scouting matches pool to view formatted proposal draft letters."
@@ -1287,14 +1164,17 @@ export default function App() {
                         </div>
 
                         {/* Control buttons & automation actions bar - responsive layout */}
-                        <div className="p-5 bg-slate-900 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="p-5 flex flex-col sm:flex-row gap-4 items-center justify-between" style={{ backgroundColor: "var(--surface)" }}>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono text-slate-500">Workspace status:</span>
-                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                              oauthToken 
-                                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15" 
-                                 : "bg-amber-500/10 text-amber-400 border border-amber-500/15"
-                            }`}>
+                            <span className="text-[10px] font-mono" style={{ color: "var(--text-faint)" }}>Workspace status:</span>
+                            <span
+                              className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded border"
+                              style={
+                                oauthToken
+                                  ? { backgroundColor: "var(--success-soft)", color: "var(--success)", borderColor: "var(--success)" }
+                                  : { backgroundColor: "var(--accent-soft)", color: "var(--accent-strong)", borderColor: "var(--accent)" }
+                              }
+                            >
                               {oauthToken ? "Authenticated client" : "Sandbox system"}
                             </span>
                           </div>
@@ -1304,12 +1184,13 @@ export default function App() {
                               id="btn-create-gdoc"
                               onClick={handleCreateGoogleDoc}
                               disabled={!proposalText || isGeneratingProposal || isCreatingDoc}
-                              className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 text-white font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-indigo-600/10"
+                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40"
+                              style={{ backgroundColor: "var(--secondary)", color: "var(--accent-contrast)" }}
                             >
                               {isCreatingDoc ? (
                                 <RefreshCw size={13} className="animate-spin" />
                               ) : (
-                                <FileCheck size={14} className="text-indigo-200" />
+                                <FileCheck size={14} />
                               )}
                               <span>Open in Google Docs</span>
                             </button>
@@ -1318,12 +1199,13 @@ export default function App() {
                               id="btn-create-gdraft"
                               onClick={handleSaveGmailDraft}
                               disabled={!proposalText || isGeneratingProposal || isCreatingDraft}
-                              className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 disabled:opacity-40 text-white font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-emerald-600/10"
+                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40"
+                              style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                             >
                               {isCreatingDraft ? (
                                 <RefreshCw size={13} className="animate-spin" />
                               ) : (
-                                <Mail size={14} className="text-emerald-200" />
+                                <Mail size={14} />
                               )}
                               <span>Check Gmail Drafts</span>
                             </button>
@@ -1345,7 +1227,7 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-5 text-center text-[10px] font-mono text-slate-500">
+      <footer className="border-t py-5 text-center text-[10px] font-mono" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)", color: "var(--text-faint)" }}>
         <p>© 2026 The Continuous Career Agent • Multi-Agent Pipeline Prototype with Google Workspace Integrations</p>
       </footer>
     </div>

@@ -4,24 +4,17 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
-import { 
-  Send, 
-  MessageSquare, 
-  Bot, 
-  User, 
-  Sparkles, 
-  Loader2, 
-  CheckCircle2, 
-  ArrowRight, 
-  Terminal, 
-  Briefcase, 
-  Compass, 
-  Award,
-  Zap,
-  Globe,
-  Code
+import {
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
+  ArrowRight,
+  Terminal
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { UserCapabilityProfile } from "../types/profile.js";
 
 interface Message {
@@ -84,25 +77,25 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
         // Safe check if completed
         const isComp = data.nextQuestion.includes("[INTERVIEW_COMPLETE]");
         const cleanedQuestion = data.nextQuestion.replace("[INTERVIEW_COMPLETE]", "").trim();
-        
+
         setMessages([{ role: "model", text: cleanedQuestion }]);
         if (isComp) {
           setIsInterviewFinished(true);
         }
       } else {
         setMessages([
-          { 
-            role: "model", 
-            text: `Hello ${fullName}! I faced an issue initializing the interview session. Let's start and discuss what technology stacks and systems you like to build.` 
+          {
+            role: "model",
+            text: `Hello ${fullName}! I faced an issue initializing the interview session. Let's start and discuss what technology stacks and systems you like to build.`
           }
         ]);
       }
     } catch (err) {
       console.error(err);
       setMessages([
-        { 
-          role: "model", 
-          text: `Hello ${fullName}! Let's discuss your technical capability. What is your go-to primary development stack, and what's a system you are proud of routing?` 
+        {
+          role: "model",
+          text: `Hello ${fullName}! Let's discuss your technical capability. What is your go-to primary development stack, and what's a system you are proud of routing?`
         }
       ]);
     } finally {
@@ -210,7 +203,7 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
       const mockProfile: UserCapabilityProfile = {
         fullName: fullName || "Senior Engineer",
         email: email || "candidate@gmail.com",
-        primary_stack: [ "TypeScript", "React", "Node.js", "Express" ],
+        primary_stack: ["TypeScript", "React", "Node.js", "Express"],
         deep_skills: [
           "Microservice caching with Redis",
           "PostgreSQL query tuning & transactional optimization",
@@ -218,9 +211,9 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
         ],
         architectural_experience: "Faced multiple scale bottlenecks with state serialization overhead. Migrated chat loops to event-driven architectures with direct pub/sub mechanisms safely.",
         communication_style: "Detail-oriented and pragmatic with direct clarity around bottleneck isolation.",
-        ideal_roles: [ "Lead Fullstack Developer", "Backend Systems Engineer", "SaaS Solutions Lead" ]
+        ideal_roles: ["Lead Fullstack Developer", "Backend Systems Engineer", "SaaS Solutions Lead"]
       };
-      
+
       // Delay briefly for full visual agency fidelity
       setTimeout(() => {
         onProfileGenerated(mockProfile, messages);
@@ -233,76 +226,83 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
   // Render onboarding
   if (!isOnboarded) {
     return (
-      <div id="onboarding-card" className="w-full max-w-2xl mx-auto bg-slate-950 border border-slate-900 rounded-2xl shadow-2xl overflow-hidden mt-8">
-        <div className="bg-slate-900/40 px-6 py-8 sm:px-8 sm:py-10 text-white relative border-b border-slate-900/70 overflow-hidden">
-          <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-12 translate-y-12 scale-125">
-            <Terminal size={220} className="text-white" />
+      <div
+        id="onboarding-card"
+        className="w-full max-w-2xl mx-auto rounded-2xl shadow-2xl overflow-hidden mt-8 border blueprint-corners"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <div
+          className="px-6 py-6 sm:px-8 sm:py-8 relative border-b overflow-hidden"
+          style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}
+        >
+          <div className="absolute right-0 bottom-0 opacity-[0.06] pointer-events-none transform translate-x-12 translate-y-12 scale-125">
+            <Terminal size={220} style={{ color: "var(--text)" }} />
           </div>
-          <div className="flex items-center gap-2 text-indigo-400 font-mono text-[10px] tracking-widest uppercase mb-3">
-            <Sparkles size={12} className="text-indigo-400" /> ACTIVE PROCESSOR: SYSTEM ARCHITECT PROFILER (AGENT 1)
-          </div>
-          <h1 className="text-2xl font-bold font-sans tracking-tight text-white">
-            The Continuous Career Agent
+          <h1 className="text-xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+            System Architect Profiler
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-2 leading-relaxed max-w-xl font-sans">
-            Unlike standard questionnaires, our autonomous multi-agent interviewer conducts a short, progressive 3-question architectural dive to uncover your hard technical design capabilities.
+          <p className="text-xs sm:text-sm mt-1 leading-relaxed max-w-xl font-sans" style={{ color: "var(--text-muted)" }}>
+            A progressive 3-question interview to evaluate your technical capability and design principles.
           </p>
         </div>
 
         <form onSubmit={handleStartInterview} className="p-6 sm:p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label id="lbl-fullname" className="block text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider">
+              <label id="lbl-fullname" className="block text-[10px] font-semibold font-mono uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                 Full Name
               </label>
-              <input 
+              <input
                 id="input-fullname"
-                type="text" 
+                type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Liam Vance"
-                className="w-full text-xs font-sans text-slate-200 px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder-slate-600"
+                className="w-full text-xs font-sans px-4 py-3 rounded-xl border focus:outline-none transition-all"
+                style={{ backgroundColor: "var(--bg)", color: "var(--text)", borderColor: "var(--border)" }}
               />
             </div>
             <div className="space-y-1.5">
-              <label id="lbl-email" className="block text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider">
+              <label id="lbl-email" className="block text-[10px] font-semibold font-mono uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                 Email Address
               </label>
-              <input 
+              <input
                 id="input-email"
-                type="email" 
+                type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. liam.vance@example.com"
-                className="w-full text-xs font-sans text-slate-200 px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder-slate-600"
+                className="w-full text-xs font-sans px-4 py-3 rounded-xl border focus:outline-none transition-all"
+                style={{ backgroundColor: "var(--bg)", color: "var(--text)", borderColor: "var(--border)" }}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label id="lbl-resume" className="block text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider">
-                Experience Blueprint / Pitch Resume (Optional)
+              <label id="lbl-resume" className="block text-[10px] font-semibold font-mono uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                Resume / Experience Summary (Optional)
               </label>
-              <span className="text-[10px] text-slate-500 font-mono">Guides initial session query</span>
             </div>
-            <textarea 
+            <textarea
               id="input-resume"
               rows={4}
               value={resumeText}
               onChange={(e) => setResumeText(e.target.value)}
-              placeholder="e.g. Senior Frontend Developer with 5 years experience in React, Next.js, and scaling client-side caching. Familiar with Node and PostgreSQL backend designs..."
-              className="w-full text-xs font-sans text-slate-200 px-4 py-3 bg-slate-950 border border-slate-850 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none placeholder-slate-600 leading-relaxed"
+              placeholder="e.g. Senior Frontend Developer with 5 years experience in React, Next.js, and scaling client-side caching..."
+              className="w-full text-xs font-sans px-4 py-3 rounded-xl border focus:outline-none transition-all resize-none leading-relaxed"
+              style={{ backgroundColor: "var(--bg)", color: "var(--text)", borderColor: "var(--border)" }}
             />
           </div>
 
           <div className="pt-2">
-            <button 
+            <button
               id="btn-start-interview"
-              type="submit" 
-              className="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold py-3.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-white/5 active:scale-[0.99]"
+              type="submit"
+              className="w-full font-semibold py-3.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer shadow-lg active:scale-[0.99]"
+              style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
             >
               <span>Initialize Career Profiling</span> <ArrowRight size={13} />
             </button>
@@ -315,39 +315,55 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
   // Render Compiling state animations
   if (isCompiling) {
     return (
-      <div id="compiling-state" className="max-w-2xl mx-auto bg-slate-950 border border-slate-900 rounded-2xl shadow-2xl p-8 sm:p-12 text-center my-12 relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-400 via-indigo-500 to-purple-600 animate-pulse" />
-        
+      <div
+        id="compiling-state"
+        className="max-w-2xl mx-auto rounded-2xl shadow-2xl p-8 sm:p-12 text-center my-12 relative overflow-hidden border"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-1 animate-pulse"
+          style={{ background: "linear-gradient(to right, var(--secondary), var(--accent))" }}
+        />
+
         <div className="flex justify-center mb-6">
           <div className="relative">
-            <div className="w-16 h-16 bg-indigo-950/40 rounded-full flex items-center justify-center text-indigo-400">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent)" }}
+            >
               <Sparkles size={32} className="animate-pulse" />
             </div>
-            <div className="absolute -inset-1 rounded-full border-2 border-indigo-500/25 border-dashed animate-spin" />
+            <div
+              className="absolute -inset-1 rounded-full border-2 border-dashed animate-spin"
+              style={{ borderColor: "var(--accent)", opacity: 0.3 }}
+            />
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-white font-sans tracking-tight">
+        <h2 className="text-xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>
           Synthesizing Capability Profile
         </h2>
-        
-        <p className="text-slate-400 text-xs sm:text-sm mt-3 max-w-md mx-auto leading-relaxed">
+
+        <p className="text-xs sm:text-sm mt-3 max-w-md mx-auto leading-relaxed" style={{ color: "var(--text-muted)" }}>
           Agent 1 is analyzing your conversational insights, evaluating architecture choices, isolating structural trade-offs, and compiling a structured profile.
         </p>
 
         {/* Dynamic status feed */}
-        <div className="mt-8 bg-slate-900/30 border border-slate-900 rounded-xl p-6 text-left max-w-md mx-auto space-y-4">
-          <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
-            <CheckCircle2 size={13} className="text-emerald-400" />
+        <div
+          className="mt-8 rounded-xl p-6 text-left max-w-md mx-auto space-y-4 border"
+          style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center gap-3 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+            <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
             <span>Parsing interview dialogue transcripts...</span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
-            <CheckCircle2 size={13} className="text-emerald-400" />
+          <div className="flex items-center gap-3 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+            <CheckCircle2 size={13} style={{ color: "var(--success)" }} />
             <span>Isolating core primary technology stack...</span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-300 font-mono animate-pulse">
-            <Loader2 size={13} className="text-indigo-400 animate-spin" />
-            <span className="font-semibold text-indigo-300">Formatting final Profile JSON...</span>
+          <div className="flex items-center gap-3 text-xs font-mono animate-pulse" style={{ color: "var(--text)" }}>
+            <Loader2 size={13} className="animate-spin" style={{ color: "var(--accent)" }} />
+            <span className="font-semibold" style={{ color: "var(--accent-strong)" }}>Formatting final Profile JSON...</span>
           </div>
         </div>
       </div>
@@ -356,42 +372,55 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
 
   // Active Chat Screen UI
   return (
-    <div id="chat-workspace-panel" className="w-full max-w-4xl mx-auto flex flex-col h-[520px] sm:h-[650px] bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden mt-2 relative">
+    <div
+      id="chat-workspace-panel"
+      className="w-full max-w-4xl mx-auto flex flex-col h-[520px] sm:h-[650px] rounded-2xl overflow-hidden mt-2 relative border"
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+    >
       {/* Top Profile Progress Bar */}
-      <div className="bg-slate-900/50 px-6 py-4 flex items-center justify-between text-white border-b border-slate-900/70">
+      <div
+        className="px-6 py-4 flex items-center justify-between border-b"
+        style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+          <div
+            className="w-9 h-9 rounded-xl border flex items-center justify-center"
+            style={{ backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-strong)" }}
+          >
             <Bot size={18} />
           </div>
           <div>
-            <div className="text-[10px] text-indigo-400 font-mono tracking-wider uppercase font-bold flex items-center gap-1.5">
-              <span>Agent 1</span> • <span className="text-slate-400">Technical Profiler</span>
+            <div
+              className="text-[10px] font-mono tracking-wider uppercase font-semibold flex items-center gap-1.5"
+              style={{ color: "var(--secondary)" }}
+            >
+              <span>Agent 1</span> • <span style={{ color: "var(--text-faint)" }}>Technical Profiler</span>
             </div>
-            <h2 className="text-xs sm:text-sm font-bold font-sans text-slate-200 mt-0.5">{fullName || "Profile Candidate"}</h2>
+            <h2 className="text-xs sm:text-sm font-semibold font-sans mt-0.5" style={{ color: "var(--text)" }}>{fullName || "Profile Candidate"}</h2>
           </div>
         </div>
 
         {/* Dynamic interactive steps indicators */}
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Interview Progress</span>
-            <span className="text-[11px] font-semibold text-indigo-300">Question {interviewProgressStep} of 4</span>
+            <span className="text-[9px] font-mono uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Interview Progress</span>
+            <span className="text-[11px] font-semibold" style={{ color: "var(--accent-strong)" }}>Question {interviewProgressStep} of 4</span>
           </div>
-          <div className="w-20 sm:w-24 bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
-            <div 
-              className="bg-indigo-500 h-full transition-all duration-500 rounded-full" 
-              style={{ width: `${Math.min(100, (interviewProgressStep / 4) * 100)}%` }}
+          <div className="w-20 sm:w-24 h-1.5 rounded-full overflow-hidden border" style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}>
+            <div
+              className="h-full transition-all duration-500 rounded-full"
+              style={{ width: `${Math.min(100, (interviewProgressStep / 4) * 100)}%`, backgroundColor: "var(--accent)" }}
             />
           </div>
         </div>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-slate-950/30">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6" style={{ backgroundColor: "var(--bg-raised)" }}>
         {messages.map((message, idx) => {
           const isUser = message.role === "user";
           return (
-            <motion.div 
+            <motion.div
               key={idx}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -399,26 +428,34 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
               className={`flex gap-3 max-w-[85%] ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
             >
               {/* Avatar circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${
-                isUser 
-                  ? "bg-slate-900 text-slate-300 border-slate-800" 
-                  : "bg-indigo-950/40 text-indigo-400 border-indigo-500/20"
-              }`}>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border"
+                style={
+                  isUser
+                    ? { backgroundColor: "var(--bg-sunken)", color: "var(--text-muted)", borderColor: "var(--border)" }
+                    : { backgroundColor: "var(--accent-soft)", color: "var(--accent-strong)", borderColor: "var(--accent)" }
+                }
+              >
                 {isUser ? <User size={13} /> : <Bot size={13} />}
               </div>
 
               {/* Message block */}
               <div className="space-y-1">
-                <div className={`text-[9px] uppercase font-mono font-bold tracking-wider ${
-                  isUser ? "text-right text-slate-500" : "text-slate-500"
-                }`}>
+                <div
+                  className={`text-[9px] uppercase font-mono font-semibold tracking-wider ${isUser ? "text-right" : ""}`}
+                  style={{ color: "var(--text-faint)" }}
+                >
                   {isUser ? "Candidate Insight" : "Interviewer Agent"}
                 </div>
-                <div className={`text-xs px-4 py-3 rounded-2xl leading-relaxed font-sans ${
-                  isUser 
-                    ? "bg-indigo-600/10 text-indigo-150 border border-indigo-500/20 rounded-tr-none shadow-lg shadow-indigo-650/5" 
-                    : "bg-slate-900/60 text-slate-300 border border-slate-850 rounded-tl-none"
-                }`}>
+                <div
+                  className={`text-xs px-4 py-3 rounded-2xl leading-relaxed font-sans border ${isUser ? "rounded-tr-none" : "rounded-tl-none"
+                    }`}
+                  style={
+                    isUser
+                      ? { backgroundColor: "var(--accent-soft)", color: "var(--text)", borderColor: "var(--accent)" }
+                      : { backgroundColor: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }
+                  }
+                >
                   <p className="whitespace-pre-line">{message.text}</p>
                 </div>
               </div>
@@ -428,20 +465,24 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
 
         {/* System Auto Completed Agent Call */}
         {isInterviewFinished && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-6 bg-slate-900/30 border border-indigo-500/15 rounded-xl space-y-4 max-w-2xl mx-auto shadow-xl"
+            className="p-6 rounded-xl space-y-4 max-w-2xl mx-auto shadow-xl border"
+            style={{ backgroundColor: "var(--surface)", borderColor: "var(--accent)" }}
           >
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/20">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                style={{ backgroundColor: "var(--success-soft)", color: "var(--success)", borderColor: "var(--success)" }}
+              >
                 <CheckCircle2 size={18} />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-200 font-sans">
+                <h4 className="text-sm font-semibold font-sans" style={{ color: "var(--text)" }}>
                   Continuous Assessment Ready
                 </h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
                   I have structured details of your system designs and primary technology architecture. We are now ready to compile your persistent Capability Profile and scout jobs.
                 </p>
               </div>
@@ -451,7 +492,8 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
               <button
                 id="btn-trigger-compilation"
                 onClick={handleCompileProfile}
-                className="bg-slate-100 hover:bg-white text-slate-950 font-bold text-xs px-5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg active:scale-[0.98] cursor-pointer"
+                className="font-semibold text-xs px-5 py-3 rounded-xl flex items-center gap-1.5 transition-all shadow-lg active:scale-[0.98] cursor-pointer"
+                style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
               >
                 <Sparkles size={13} /> Compile Profile & Scout Matches <ArrowRight size={13} />
               </button>
@@ -461,13 +503,19 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
 
         {isTyping && (
           <div className="flex gap-3 max-w-[50%] mr-auto items-center">
-            <div className="w-8 h-8 rounded-full bg-indigo-950/40 flex items-center justify-center border border-indigo-500/25 text-indigo-400">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center border"
+              style={{ backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-strong)" }}
+            >
               <Bot size={13} className="animate-pulse" />
             </div>
-            <div className="bg-slate-900/60 border border-slate-850 px-4 py-3 rounded-2xl rounded-tl-none shadow-lg flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div
+              className="px-4 py-3 rounded-2xl rounded-tl-none shadow-lg flex items-center gap-1.5 border"
+              style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+            >
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: "var(--text-faint)", animationDelay: "0ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: "var(--text-faint)", animationDelay: "150ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: "var(--text-faint)", animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -476,22 +524,24 @@ export default function InterviewerChat({ onProfileGenerated }: InterviewerChatP
       </div>
 
       {/* Input panel */}
-      <div className="p-4 bg-slate-950/50 border-t border-slate-900/80 flex items-center gap-3">
+      <div className="p-4 border-t flex items-center gap-3" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
         <form onSubmit={handleSendMessage} className="flex-1 flex gap-2">
-          <input 
+          <input
             id="chat-user-input"
             type="text"
             disabled={isInterviewFinished || isTyping}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder={isInterviewFinished ? "Assessment concluded successfully!" : "Detail your architectural designs or technical trade-offs..."}
-            className="flex-1 text-xs text-slate-200 px-4 py-3 bg-slate-950 disabled:bg-slate-900/50 disabled:text-slate-650 border border-slate-900 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder-slate-600"
+            className="flex-1 text-xs px-4 py-3 rounded-xl border focus:outline-none transition-all disabled:opacity-50"
+            style={{ backgroundColor: "var(--bg)", color: "var(--text)", borderColor: "var(--border)" }}
           />
-          <button 
+          <button
             id="chat-send-submit"
             type="submit"
             disabled={isInterviewFinished || isTyping || !inputText.trim()}
-            className="bg-slate-100 hover:bg-white disabled:bg-slate-900 disabled:text-slate-700 text-slate-950 p-3 rounded-xl transition-all font-bold shrink-0 flex items-center justify-center cursor-pointer active:scale-[0.96]"
+            className="p-3 rounded-xl transition-all font-semibold shrink-0 flex items-center justify-center cursor-pointer active:scale-[0.96] disabled:opacity-40"
+            style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
           >
             <Send size={15} />
           </button>
