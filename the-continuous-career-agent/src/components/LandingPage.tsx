@@ -18,27 +18,15 @@ import Particles from "./Particles";
 
 interface LandingPageProps {
   onEnter: () => void;
-  onSandboxBypass: () => Promise<void>;
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }
 
 export default function LandingPage({
   onEnter,
-  onSandboxBypass,
   theme,
   onToggleTheme
 }: LandingPageProps) {
-  const [isBypassing, setIsBypassing] = useState(false);
-
-  const handleSandboxAction = async () => {
-    setIsBypassing(true);
-    try {
-      await onSandboxBypass();
-    } finally {
-      setIsBypassing(false);
-    }
-  };
 
   const agents = [
     {
@@ -198,20 +186,7 @@ export default function LandingPage({
               <ChevronRight size={15} />
             </button>
 
-            <button
-              onClick={handleSandboxAction}
-              disabled={isBypassing}
-              className="w-full sm:w-auto font-mono text-xs px-6 py-3.5 rounded-lg flex items-center justify-center gap-2 border transition-all cursor-pointer disabled:opacity-50"
-              style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)", color: "var(--text-muted)" }}
-              id="landing-cta-sandbox"
-            >
-              {isBypassing ? (
-                <RefreshCw size={13} className="animate-spin" />
-              ) : (
-                <Terminal size={13} style={{ color: "var(--secondary)" }} />
-              )}
-              <span>Bypass to Local Sandbox</span>
-            </button>
+
           </motion.div>
         </div>
 
@@ -302,7 +277,7 @@ export default function LandingPage({
               </div>
               <h4 className="text-xs sm:text-sm font-semibold">Firestore Cloud Storage</h4>
               <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                Persistent profile telemetry compiled and stored securely with local sandbox cache layers.
+                Persistent profile telemetry compiled and stored securely in Firestore cloud database.
               </p>
             </div>
 

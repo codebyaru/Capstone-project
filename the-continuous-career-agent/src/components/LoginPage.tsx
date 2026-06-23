@@ -11,19 +11,20 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-  interface LoginPageProps {
-  onGoogleSignIn: (mode: "signin" | "signup") => Promise<void>;
-  onEmailSignIn: (email: string, pass: string) => Promise<void>;
-  onEmailSignUp: (email: string, pass: string, fullName: string) => Promise<void>;
+interface LoginPageProps {
+  onGoogleSignIn: (activeTab: "signin" | "signup") => Promise<void>;
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }
 
-
-export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp }: LoginPageProps) {
+export default function LoginPage({
+  onGoogleSignIn,
+  theme,
+  onToggleTheme
+}: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [isBtnClicking, setIsBtnClicking] = useState(false);
-  
+
   // Email/Password states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +47,7 @@ export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp
     setPassword("");
   };
 
-  const handleGoogleSignInAction = async () => {
+  const handleSignInAction = async () => {
     setIsBtnClicking(true);
     setErrorMsg("");
     setNotRegisteredWarning(false);
@@ -97,11 +98,11 @@ export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp
     } catch (err: any) {
       console.error("Auth submit error:", err);
       let displayError = err.message || "Authentication failed.";
-      
+
       // Determine if they are not yet a user to show a specialized signup suggestion pop warning
       if (
-        err.code === "auth/user-not-found" || 
-        err.message?.toLowerCase().includes("user not found") || 
+        err.code === "auth/user-not-found" ||
+        err.message?.toLowerCase().includes("user not found") ||
         err.message?.toLowerCase().includes("no user record") ||
         (activeTab === "signin" && err.code === "auth/invalid-credential")
       ) {
@@ -114,7 +115,7 @@ export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp
       } else if (err.code === "auth/weak-password") {
         displayError = "The chosen password does not satisfy secure Firebase policies.";
       }
-      
+
       setErrorMsg(displayError);
     } finally {
       setIsBtnClicking(false);
@@ -371,30 +372,7 @@ export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp
               )}
             </AnimatePresence>
 
-            {/* Direct Sandbox Bypass option */}
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t" style={{ borderColor: "var(--border)" }} />
-              <span className="flex-shrink mx-3 text-[9px] font-mono tracking-wider uppercase" style={{ color: "var(--text-faint)" }}>or bypass auth</span>
-              <div className="flex-grow border-t" style={{ borderColor: "var(--border)" }} />
-            </div>
 
-            <div className="pt-0.5">
-              <button
-                type="button"
-                onClick={onSandboxBypass}
-                className="w-full font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[11px] font-mono tracking-wide cursor-pointer active:scale-[0.99] border"
-                style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)", color: "var(--text-muted)" }}
-                id="sandbox-bypass-btn"
-              >
-                <Terminal size={12} style={{ color: "var(--secondary)" }} />
-                <span>Launch Local Sandbox Session</span>
-              </button>
-            </div>
-
-            {/* Sandbox Notice / Popup Warning */}
-            <p className="text-[10px] font-sans leading-relaxed text-center" style={{ color: "var(--text-faint)" }}>
-              Note: Popups are secure. If internal workspace cookies restrict google sign-in inside the preview frame, our secure local developer environment bypass activates automatically.
-            </p>
           </div>
         </motion.div>
 
