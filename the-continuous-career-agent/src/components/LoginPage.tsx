@@ -18,14 +18,102 @@ interface LoginPageProps {
   onToggleTheme: () => void;
 }
 
-export default function LoginPage({ onGoogleSignIn, onSandboxBypass, theme, onToggleTheme }: LoginPageProps) {
+export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [isBtnClicking, setIsBtnClicking] = useState(false);
+  
+  // Email/Password states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [notRegisteredWarning, setNotRegisteredWarning] = useState(false);
 
-  const handleSignInAction = async () => {
+  // Strong password checks
+  const lenMet = password.length >= 8;
+  const upperMet = /[A-Z]/.test(password);
+  const lowerMet = /[a-z]/.test(password);
+  const digitMet = /[0-9]/.test(password);
+  const specialMet = /[^A-Za-z0-9]/.test(password);
+  const allCriteriaMet = lenMet && upperMet && lowerMet && digitMet && specialMet;
+
+  const handleTabChange = (tab: "signin" | "signup") => {
+    setActiveTab(tab);
+    setErrorMsg("");
+    setNotRegisteredWarning(false);
+    setPassword("");
+  };
+
+  const handleGoogleSignInAction = async () => {
+    setIsBtnClicking(true);
+    setErrorMsg("");
+    setNotRegisteredWarning(false);
+    try {
+      await onGoogleSignIn(activeTab);
+    } catch (err: any) {
+      if (err.message === "ACCOUNT_NOT_FOUND" || err.code === "auth/user-not-found") {
+        setActiveTab("signup");
+        setNotRegisteredWarning(true);
+        setErrorMsg("This Google account is not registered. Please sign up to establish your profile records.");
+      } else {
+        setErrorMsg(err.message || "Google authentication failed.");
+      }
+    } finally {
+      setIsBtnClicking(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setNotRegisteredWarning(false);
+
+    if (!email || !password) {
+      setErrorMsg("Please fill in all required fields.");
+      return;
+    }
+    if (activeTab === "signup" && !fullName) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+
+    if (activeTab === "signup") {
+      // Strictly enforce strong password rule
+      if (!allCriteriaMet) {
+        setErrorMsg("Password is not strong enough. Please follow all instructions highlighted in the strength guide.");
+        return;
+      }
+    }
+
     setIsBtnClicking(true);
     try {
-      await onGoogleSignIn();
+      if (activeTab === "signin") {
+        await onEmailSignIn(email, password);
+      } else {
+        await onEmailSignUp(email, password, fullName);
+      }
+    } catch (err: any) {
+      console.error("Auth submit error:", err);
+      let displayError = err.message || "Authentication failed.";
+      
+      // Determine if they are not yet a user to show a specialized signup suggestion pop warning
+      if (
+        err.code === "auth/user-not-found" || 
+        err.message?.toLowerCase().includes("user not found") || 
+        err.message?.toLowerCase().includes("no user record") ||
+        (activeTab === "signin" && err.code === "auth/invalid-credential")
+      ) {
+        setNotRegisteredWarning(true);
+        displayError = "No account found matching this email. Sign up first to get started!";
+      } else if (err.code === "auth/wrong-password") {
+        displayError = "Incorrect password. Please verify and try again.";
+      } else if (err.code === "auth/email-already-in-use") {
+        displayError = "An account is already registered with this email address.";
+      } else if (err.code === "auth/weak-password") {
+        displayError = "The chosen password does not satisfy secure Firebase policies.";
+      }
+      
+      setErrorMsg(displayError);
     } finally {
       setIsBtnClicking(false);
     }
