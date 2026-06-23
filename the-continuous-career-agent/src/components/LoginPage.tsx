@@ -11,12 +11,14 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-interface LoginPageProps {
-  onGoogleSignIn: () => Promise<void>;
-  onSandboxBypass: () => Promise<void>;
+  interface LoginPageProps {
+  onGoogleSignIn: (mode: "signin" | "signup") => Promise<void>;
+  onEmailSignIn: (email: string, pass: string) => Promise<void>;
+  onEmailSignUp: (email: string, pass: string, fullName: string) => Promise<void>;
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }
+
 
 export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
