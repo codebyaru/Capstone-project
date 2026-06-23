@@ -1,10 +1,9 @@
 {
-  "projectId": "swift-cortex-d4wsx",
-  "appId": "1:614933412999:web:f4ca79941c9e35721acc22",
-  "apiKey": "YOUR_API-KEY_HERE",
-  "authDomain": "swift-cortex-d4wsx.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-4978e2f1-3441-483e-9e39-f4f7f73d4410",
-  "storageBucket": "swift-cortex-d4wsx.firebasestorage.app",
-  "messagingSenderId": "614933412999",
-  "measurementId": ""
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "job-genius--ai.firebaseapp.com",
+  "projectId": "job-genius--ai",
+  "storageBucket": "job-genius--ai.firebasestorage.app",
+  "messagingSenderId": "563486476084",
+  "appId": "1:563486476084:web:b9caf6f7a104dc90e0c761",
+  "measurementId": "G-C0EG7BRJZ0"
 }
