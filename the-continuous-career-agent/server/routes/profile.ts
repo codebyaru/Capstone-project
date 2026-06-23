@@ -4,14 +4,14 @@
  */
 
 import { Router, Request, Response } from "express";
-import { getGeminiClient, MODELS } from "../utils/gemini.js";
-import { Type, ThinkingLevel } from "@google/genai";
+import { getGeminiClient, MODELS, generateContentWithFallback } from "../utils/gemini.js";
+import { Type } from "@google/genai";
 import { UserCapabilityProfile } from "../../src/types/profile.js";
-import {
-  sanitizeUserProfile,
-  validateSessionHeader,
-  encryptToken,
-  secureLog
+import { 
+  sanitizeUserProfile, 
+  validateSessionHeader, 
+  encryptToken, 
+  secureLog 
 } from "../utils/security.js";
 import { onStateHandover } from "../../config/antigravity.config.js";
 
@@ -55,7 +55,7 @@ router.post("/interview", validateSessionHeader, async (req: Request, res: Respo
     const ai = getGeminiClient();
 
     // Prepare system instructions for Agent 1
-    const systemPrompt = `You are Agent 1: The Technical Interviewer & Profiler for "The Job Genius AI".
+    const systemPrompt = `You are Agent 1: The Technical Interviewer & Profiler for "The Continuous Career Agent".
 Your sole objective is to conduct a highly focused, extremely empathetic, yet deeply technical technical interview consisting of exactly 3 to 4 targeting questions to uncover a candidate's true capability, problem-solving style, and architectural expertise.
 
 Structure your interactions:
@@ -82,11 +82,11 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
     } else if (contents.length === 0) {
       contents.push({
         role: "user",
-        parts: [{ text: "Hello! Let's start the Job Genius AI technical interviewing session." }],
+        parts: [{ text: "Hello! Let's start the continuous career agent technical interviewing session." }],
       });
     }
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithFallback(ai, {
       model: MODELS.interviewer,
       contents,
       config: {
@@ -106,11 +106,30 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
       ]
     });
   } catch (error: any) {
-    console.error("Agent 1 (Interviewer) Error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to generate interview response",
-      details: error.message,
+    const errorStr = typeof error === "object" ? JSON.stringify(error) : error.toString();
+    const isQuota = errorStr.includes("429") || errorStr.includes("RESOURCE_EXHAUSTED") || errorStr.includes("quota");
+    
+    console.warn(`Agent 1 (Interviewer) API ${isQuota ? "quota hit" : "error"}. Enacting offline fallback conversational loop...`);
+    
+    // Offline conversational fallback
+    const FALLBACK_QUESTIONS = [
+      "Tell me more about your experience with scaling applications.",
+      "What is the most complex architectural challenge you've solved?",
+      "How do you handle severe bottlenecks in continuous deployment?",
+      "Can you give an example of optimizing memory or state architectures in your past roles?",
+      "Thank you for sharing. Could you outline how you manage system performance trade-offs?"
+    ];
+    const history = req.body.chatHistory || [];
+    const userMessageCount = history.filter((m: any) => m.role === "user").length;
+    const nextQuestion = FALLBACK_QUESTIONS[userMessageCount % FALLBACK_QUESTIONS.length];
+
+    res.json({
+      success: true,
+      nextQuestion,
+      chatHistory: [
+        ...history,
+        { role: "model", text: nextQuestion }
+      ]
     });
   }
 });
@@ -118,20 +137,20 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
 function performLocalProfileCompilation(chatHistory: any[]): UserCapabilityProfile {
   let fullName = "Expert Developer";
   let email = "engineer@continuous-agent.io";
-
+  
   // Find any name input if exists in user onboarding / chat history
   const userTexts = chatHistory
     .filter(msg => msg.role === "user")
     .map(msg => msg.text || "");
-
+    
   const combinedText = userTexts.join(" ");
-
+  
   // Basic keyword extraction for tech stack
   const stackKeywords = ["react", "typescript", "node", "express", "postgresql", "postgres", "redis", "websockets", "aws", "docker", "kubernetes", "solidity", "rust", "python", "next.js", "nextjs", "tailwind"];
   const matchedStack = stackKeywords.filter(kw => combinedText.toLowerCase().includes(kw));
-
-  const primaryStack = matchedStack.length > 0
-    ? matchedStack.map(m => m.charAt(0).toUpperCase() + m.slice(1))
+  
+  const primaryStack = matchedStack.length > 0 
+    ? matchedStack.map(m => m.charAt(0).toUpperCase() + m.slice(1)) 
     : ["TypeScript", "Node.js", "React", "PostgreSQL"];
 
   const deepSkills = [
@@ -192,8 +211,8 @@ function performLocalProfileCompilation(chatHistory: any[]): UserCapabilityProfi
 router.post("/compile", validateSessionHeader, async (req: Request, res: Response): Promise<void> => {
   const { chatHistory } = req.body;
   if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
-    res.status(400).json({ success: false, error: "Chat history is required for compilation" });
-    return;
+     res.status(400).json({ success: false, error: "Chat history is required for compilation" });
+     return;
   }
 
   // Securely log using our masked secure log helper
@@ -210,7 +229,7 @@ router.post("/compile", validateSessionHeader, async (req: Request, res: Respons
 Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills, architectural_experience (with specific trade-offs and decision justifications), observed communication_style, and ideal_roles. Keep details structured and informative.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",
@@ -219,9 +238,6 @@ Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills
       ],
       config: {
         systemInstruction: compilePrompt,
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.HIGH,
-        },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -260,10 +276,12 @@ Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills
       profile: parsedProfile
     });
   } catch (error: any) {
-    console.warn("Profile compilation via Gemini failed, falling back to local compilation model.", error.message || error);
+    const errorStr = typeof error === "object" ? JSON.stringify(error) : error.toString();
+    const isQuota = errorStr.includes("429") || errorStr.includes("RESOURCE_EXHAUSTED") || errorStr.includes("quota");
+    console.warn(`Agent 1 Profile compilation API ${isQuota ? "quota hit" : "error"}. Enacting offline fallback conversational loop...`);
     try {
       const parsedProfile = performLocalProfileCompilation(chatHistory);
-
+      
       // Attempt handover using fallback profile
       onStateHandover(parsedProfile).catch((err) => {
         secureLog("Antigravity state handover hook failed in fallback mode", { error: err.message });
