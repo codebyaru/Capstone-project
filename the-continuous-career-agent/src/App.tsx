@@ -174,40 +174,8 @@ export default function App() {
       showNotification(`Welcome back, ${currentUser.displayName || "Developer"}!`, "success");
       await loadUserDataFromFirestore(currentUser.uid);
     } catch (error: any) {
-      console.warn("Google credentials prompt failed inside context:", error);
-      if (error.code === "auth/popup-blocked" || error.code === "auth/iframe-directory-not-supported" || error.code === "auth/operation-not-allowed") {
-        showNotification("Google Authenticator block inside browser frame. Launching secure Sandbox login...", "info");
-      } else {
-        showNotification("Auth notice, setting sandbox login configuration.", "info");
-      }
-      await handleTestUserMockLogin();
-    }
-  };
-
-  const handleTestUserMockLogin = async () => {
-    try {
-      const email = "sandbox.user@continuous-career.app";
-      const pw = "SandboxPassword123!";
-      let userCredential;
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email, pw);
-      } catch (signupErr: any) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, pw);
-      }
-      const currentUser = userCredential.user;
-      setUser(currentUser);
-      showNotification("Linked to Firebase Firestore Cloud Storage!", "success");
-      await loadUserDataFromFirestore(currentUser.uid);
-    } catch (err: any) {
-      console.error("Firebase accounts block fallback:", err);
-      const mockUser = {
-        uid: "demo-sandbox-uid",
-        displayName: "Sandbox Developer",
-        email: "sandbox.user@continuous-career.app",
-        photoURL: ""
-      };
-      setUser(mockUser);
-      showNotification("Offline Sandbox Developer activated.", "info");
+      console.error("Google authentication failed:", error);
+      showNotification(error.message || "Google authentication failed. Please try again.", "error");
     }
   };
 
@@ -582,7 +550,6 @@ export default function App() {
     return (
       <LandingPage
         onEnter={() => setShowLanding(false)}
-        onSandboxBypass={handleTestUserMockLogin}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -596,7 +563,6 @@ export default function App() {
         {renderNotificationToast()}
         <LoginPage
           onGoogleSignIn={handleGoogleSignIn}
-          onSandboxBypass={handleTestUserMockLogin}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
