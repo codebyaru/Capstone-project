@@ -86,7 +86,7 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass, theme, onTo
               Multi-Agent Talent Dossier
             </span>
             <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight" style={{ color: "var(--text)" }}>
-              Continuous Career Agent
+              Job Genius AI
             </h1>
             <p className="text-xs font-sans max-w-sm mx-auto leading-relaxed" style={{ color: "var(--text-muted)" }}>
               An autonomous multi-agent partner that conducts technical profiling, coordinates market discovery, and automates outreach templates.

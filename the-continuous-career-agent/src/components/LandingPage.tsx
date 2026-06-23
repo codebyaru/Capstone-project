@@ -106,7 +106,7 @@ export default function LandingPage({
           </div>
           <div>
             <h1 className="text-xs sm:text-sm font-semibold font-mono tracking-wider uppercase" style={{ color: "var(--text)" }}>
-              Continuous Career Agent
+              Job Genius AI
             </h1>
           </div>
         </div>
@@ -146,11 +146,11 @@ export default function LandingPage({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] sm:text-xs font-mono font-bold tracking-wider"
+            // className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] sm:text-xs font-mono font-bold tracking-wider"
             style={{ backgroundColor: "var(--bg-sunken)", borderColor: "var(--border)" }}
           >
-            <Sparkles size={12} style={{ color: "var(--accent)" }} />
-            <span style={{ color: "var(--secondary)" }}>AUTONOMOUS MULTI-AGENT TALENT ACQUISITION</span>
+            {/* <Sparkles size={12} style={{ color: "var(--accent)" }} /> */}
+            {/* <span style={{ color: "var(--secondary)" }}>AUTONOMOUS MULTI-AGENT TALENT ACQUISITION</span> */}
           </motion.div>
 
           <motion.h2
@@ -328,7 +328,7 @@ export default function LandingPage({
         className="border-t py-5 text-center text-[10px] font-mono flex flex-col sm:flex-row items-center justify-between px-6 gap-3 z-10"
         style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-raised)", color: "var(--text-faint)" }}
       >
-        <p>© 2026 The Continuous Career Agent • Multi-Agent Pipeline Prototype</p>
+        <p>© 2026 The Job Genius AI • Multi-Agent Pipeline Prototype</p>
         <div className="flex items-center gap-1.5 justify-center">
           <ShieldCheck size={13} style={{ color: "var(--secondary)" }} />
           <span>FIREBASE CLOUD SECURED • AES-256</span>

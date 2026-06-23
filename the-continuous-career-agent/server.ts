@@ -30,22 +30,22 @@ async function startServer() {
   // 3. Mount framework assets serving
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting server in DEVELOPMENT mode with Vite integration...");
-    
+
     // Create Vite server in middleware mode
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
-    
+
     // Use Vite's connect instance as middleware
     app.use(vite.middlewares);
   } else {
     console.log("Starting server in PRODUCTION mode...");
     const distPath = path.join(process.cwd(), "dist");
-    
+
     // Serve static files compiled inside 'dist/' folder
     app.use(express.static(distPath));
-    
+
     // Support React Router client-side fallbacks
     app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
@@ -54,7 +54,7 @@ async function startServer() {
 
   // Bind server precisely to port 3000 and 0.0.0.0 host
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`The Continuous Career Agent Backend running at http://0.0.0.0:${PORT}`);
+    console.log(`The Job Genius AI Backend running at http://0.0.0.0:${PORT}`);
   });
 }
 

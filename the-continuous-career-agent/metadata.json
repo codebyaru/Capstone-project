@@ -1,6 +1,8 @@
 {
-  "name": "The Continuous Career Agent",
+  "name": "The Job Genius AI",
   "description": "An autonomous multi-agent career companion that interviews users, builds custom capability profiles, matches them with career opportunities, and drafts outreach documents via Google Workspace.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

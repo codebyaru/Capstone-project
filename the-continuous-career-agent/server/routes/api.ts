@@ -20,7 +20,7 @@ apiRouter.get("/health", (req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    service: "Continuous Career Agent Pipeline Backend Node Server"
+    service: "Job Genius AI Pipeline Backend Node Server"
   });
 });
 

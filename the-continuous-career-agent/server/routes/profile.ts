@@ -7,11 +7,11 @@ import { Router, Request, Response } from "express";
 import { getGeminiClient, MODELS } from "../utils/gemini.js";
 import { Type, ThinkingLevel } from "@google/genai";
 import { UserCapabilityProfile } from "../../src/types/profile.js";
-import { 
-  sanitizeUserProfile, 
-  validateSessionHeader, 
-  encryptToken, 
-  secureLog 
+import {
+  sanitizeUserProfile,
+  validateSessionHeader,
+  encryptToken,
+  secureLog
 } from "../utils/security.js";
 import { onStateHandover } from "../../config/antigravity.config.js";
 
@@ -55,7 +55,7 @@ router.post("/interview", validateSessionHeader, async (req: Request, res: Respo
     const ai = getGeminiClient();
 
     // Prepare system instructions for Agent 1
-    const systemPrompt = `You are Agent 1: The Technical Interviewer & Profiler for "The Continuous Career Agent".
+    const systemPrompt = `You are Agent 1: The Technical Interviewer & Profiler for "The Job Genius AI".
 Your sole objective is to conduct a highly focused, extremely empathetic, yet deeply technical technical interview consisting of exactly 3 to 4 targeting questions to uncover a candidate's true capability, problem-solving style, and architectural expertise.
 
 Structure your interactions:
@@ -82,7 +82,7 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
     } else if (contents.length === 0) {
       contents.push({
         role: "user",
-        parts: [{ text: "Hello! Let's start the continuous career agent technical interviewing session." }],
+        parts: [{ text: "Hello! Let's start the Job Genius AI technical interviewing session." }],
       });
     }
 
@@ -118,20 +118,20 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
 function performLocalProfileCompilation(chatHistory: any[]): UserCapabilityProfile {
   let fullName = "Expert Developer";
   let email = "engineer@continuous-agent.io";
-  
+
   // Find any name input if exists in user onboarding / chat history
   const userTexts = chatHistory
     .filter(msg => msg.role === "user")
     .map(msg => msg.text || "");
-    
+
   const combinedText = userTexts.join(" ");
-  
+
   // Basic keyword extraction for tech stack
   const stackKeywords = ["react", "typescript", "node", "express", "postgresql", "postgres", "redis", "websockets", "aws", "docker", "kubernetes", "solidity", "rust", "python", "next.js", "nextjs", "tailwind"];
   const matchedStack = stackKeywords.filter(kw => combinedText.toLowerCase().includes(kw));
-  
-  const primaryStack = matchedStack.length > 0 
-    ? matchedStack.map(m => m.charAt(0).toUpperCase() + m.slice(1)) 
+
+  const primaryStack = matchedStack.length > 0
+    ? matchedStack.map(m => m.charAt(0).toUpperCase() + m.slice(1))
     : ["TypeScript", "Node.js", "React", "PostgreSQL"];
 
   const deepSkills = [
@@ -192,8 +192,8 @@ function performLocalProfileCompilation(chatHistory: any[]): UserCapabilityProfi
 router.post("/compile", validateSessionHeader, async (req: Request, res: Response): Promise<void> => {
   const { chatHistory } = req.body;
   if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
-     res.status(400).json({ success: false, error: "Chat history is required for compilation" });
-     return;
+    res.status(400).json({ success: false, error: "Chat history is required for compilation" });
+    return;
   }
 
   // Securely log using our masked secure log helper
@@ -263,7 +263,7 @@ Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills
     console.warn("Profile compilation via Gemini failed, falling back to local compilation model.", error.message || error);
     try {
       const parsedProfile = performLocalProfileCompilation(chatHistory);
-      
+
       // Attempt handover using fallback profile
       onStateHandover(parsedProfile).catch((err) => {
         secureLog("Antigravity state handover hook failed in fallback mode", { error: err.message });

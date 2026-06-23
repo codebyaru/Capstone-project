@@ -444,7 +444,7 @@ export default function App() {
           "Authorization": `Bearer ${oauthToken}`
         },
         body: JSON.stringify({
-          documentTitle: `Continuous Career Agent Proposal - ${selectedMatch?.companyName || "Outreach"}`,
+          documentTitle: `Job Genius AI Proposal - ${selectedMatch?.companyName || "Outreach"}`,
           proposalText: proposalText
         })
       });
@@ -624,7 +624,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xs sm:text-sm font-semibold font-display tracking-tight flex items-center gap-1.5 flex-wrap" style={{ color: "var(--text)" }}>
-              Continuous Career Agent
+              Job Genius AI
             </h1>
           </div>
         </div>
@@ -1246,7 +1246,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t py-5 text-center text-[10px] font-mono" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)", color: "var(--text-faint)" }}>
-        <p>© 2026 The Continuous Career Agent • Multi-Agent Pipeline Prototype with Google Workspace Integrations</p>
+        <p>© 2026 The Job Genius AI • Multi-Agent Pipeline Prototype with Google Workspace Integrations</p>
       </footer>
     </div>
   );
