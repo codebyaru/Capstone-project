@@ -209,8 +209,8 @@ router.post("/compile", validateSessionHeader, async (req: Request, res: Respons
     const compilePrompt = `Convert the technical conversation history into a beautifully compiled Capability Profile JSON conforming exactly to the requested schema.
 Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills, architectural_experience (with specific trade-offs and decision justifications), observed communication_style, and ideal_roles. Keep details structured and informative.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+    const response = await generateContentWithFallback(ai, {
+      model: MODELS.interviewer,
       contents: [
         {
           role: "user",
@@ -219,9 +219,6 @@ Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills
       ],
       config: {
         systemInstruction: compilePrompt,
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.HIGH,
-        },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

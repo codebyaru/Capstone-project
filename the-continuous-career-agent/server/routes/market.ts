@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { getGeminiClient, MODELS } from "../utils/gemini.js";
+import { getGeminiClient, MODELS, generateContentWithFallback } from "../utils/gemini.js";
 import { Type } from "@google/genai";
 import { MatchRecommendation } from "../../src/types/profile.js";
 import { 
@@ -122,6 +122,10 @@ function generateWhyYouMatch(profile: any, job: any, overlap: string[]): string 
     return `Your specialized focus on database optimization and PostgreSQL aligns directly with Veridical Finance's primary-replica cluster synchronization and replication failover security needs.`;
   } else if (job.roleId === "gig-110") {
     return `Your mastery of state transitions, Framer Motion, and creative UI layout matches CyberZen's interactive gameplay platform, ensuring a delightful tactile feedback experience.`;
+  } else if (job.roleId === "gig-111") {
+    return `Your strong machine learning background and experience optimizing PyTorch/CUDA workflows maps directly onto NeuroFlow's distributed training requirements. Your ability to scale GPU-bound architectures ensures immediate value.`;
+  } else if (job.roleId === "gig-112") {
+    return `Your expertise in AI agent loops and LangChain matches Cognitive Auto's goal to deploy production-grade LLM workflows. Your background in vector databases will help optimize prompt retrieval latency.`;
   }
   
   return `Your background in ${primaryStackStr} and focus on ${profile.deep_skills?.[0] || "efficient software engineering"} makes you a strong match for the ${job.title} position at ${job.companyName}. You possess the right combination of technical skill overlap (${skillWord}) and problem-solving experience to deliver immediately.`;
@@ -222,7 +226,7 @@ For each selected job, provide:
     const contents: any[] = [{ role: "user", parts: [{ text: userPrompt }] }];
 
     // Initial GenAI call with tools
-    let firstResponse = await ai.models.generateContent({
+    let firstResponse = await generateContentWithFallback(ai, {
       model: MODELS.matchmaker,
       contents: contents,
       config: {
@@ -266,7 +270,7 @@ For each selected job, provide:
       });
 
       // Execute final turn specifying JSON output schema
-      const finalResponse = await ai.models.generateContent({
+      const finalResponse = await generateContentWithFallback(ai, {
         model: MODELS.matchmaker,
         contents: contents,
         config: {
@@ -320,7 +324,7 @@ For each selected job, provide:
         parts: [{ text: `Here is the full job dataset: ${JSON.stringify(jobsPayload, null, 2)}. Please compile the top 3 recommendations now.` }]
       });
 
-      const fallbackResponse = await ai.models.generateContent({
+      const fallbackResponse = await generateContentWithFallback(ai, {
         model: MODELS.matchmaker,
         contents: contents,
         config: {

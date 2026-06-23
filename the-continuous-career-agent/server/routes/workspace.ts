@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { getGeminiClient, MODELS } from "../utils/gemini.js";
+import { getGeminiClient, MODELS, generateContentWithFallback } from "../utils/gemini.js";
 import { 
   sanitizeUserProfile, 
   validateSessionHeader, 
@@ -103,8 +103,8 @@ Guidelines:
 
     const instructionsText = `Job Details:\n${JSON.stringify(cleanJob, null, 2)}\n\nCandidate Profile:\n${JSON.stringify(cleanProfile, null, 2)}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const response = await generateContentWithFallback(ai, {
+      model: MODELS.outreachSpecialist,
       contents: [{ role: "user", parts: [{ text: instructionsText }] }],
       config: {
         systemInstruction: outreachPrompt,

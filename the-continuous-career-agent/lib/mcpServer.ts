@@ -94,6 +94,22 @@ export const CORE_JOBS_DATASET: MockJob[] = [
     salaryOrRate: "$110 - $140 / hr",
     description: "Seeking a designer with advanced mastery of Framer Motion and WebGL canvases to craft high-fidelity, real-time interactive interactive layout interfaces for browser gaming leagues.",
     preferredSkills: ["React", "TypeScript", "Tailwind CSS", "Three.js", "Framer Motion", "Canvas", "WebGL"]
+  },
+  {
+    roleId: "gig-111",
+    title: "Machine Learning Systems Engineer",
+    companyName: "NeuroFlow AI (YC W25)",
+    salaryOrRate: "$130 - $165 / hr",
+    description: "Looking for an expert to optimize training pipelines and deploy PyTorch/TensorFlow models on distributed GPU clusters. Experience with CUDA kernel optimization, model quantization, and caching inference results is highly desired.",
+    preferredSkills: ["Python", "PyTorch", "Machine Learning", "CUDA", "TensorFlow", "Model Quantization", "GPU Clusters"]
+  },
+  {
+    roleId: "gig-112",
+    title: "AI Agent & NLP Developer",
+    companyName: "Cognitive Auto (Autonomous SaaS)",
+    salaryOrRate: "$120 - $155 / hr",
+    description: "Seeking a developer to build advanced multi-agent workflows using LLM APIs. Experience with LangChain, vector databases (Pinecone/Milvus), prompt engineering, and fine-tuning lightweight models is required.",
+    preferredSkills: ["Python", "NLP", "LangChain", "Vector Databases", "LLM", "Prompt Engineering", "Fine-tuning"]
   }
 ];
 

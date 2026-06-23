@@ -307,42 +307,183 @@ export default function App() {
       console.error(err);
       showNotification("Using local fallback match index.", "info");
 
-      // Fallback listings matching the database schema
-      const fallbackMatches: MatchRecommendation[] = [
-        {
-          roleId: "gig-103",
-          title: "Lead Frontend Engineer (NextJS & Framer/Motion)",
-          companyName: "Aether AI (Co-Pilot for Biotech)",
-          matchScore: 98,
-          whyYouMatch: "Your deep expertise in high-performance state architectures and responsive micro-interactions perfectly matches Aether AI's interactive genetic sequencing canvas.",
-          alignmentHighlights: {
-            skillOverlap: ["React", "TypeScript", "Tailwind CSS", "Framer Motion"],
-            insightCongruence: "Direct knowledge addressing redraw penalties and telemetry lag."
+      // Determine candidate profile category to provide relevant fallback matches
+      const profileText = [
+        ...(targetProfile.primary_stack || []),
+        ...(targetProfile.deep_skills || []),
+        ...(targetProfile.ideal_roles || []),
+        targetProfile.architectural_experience || ""
+      ].join(" ").toLowerCase();
+
+      const isML = profileText.includes("ml") || 
+                  profileText.includes("machine learning") || 
+                  profileText.includes("ai") || 
+                  profileText.includes("pytorch") || 
+                  profileText.includes("tensorflow") || 
+                  profileText.includes("nlp") || 
+                  profileText.includes("data science") || 
+                  profileText.includes("python");
+
+      const isWeb3 = profileText.includes("solidity") || 
+                     profileText.includes("smart contract") || 
+                     profileText.includes("blockchain") || 
+                     profileText.includes("web3") || 
+                     profileText.includes("rust");
+
+      const isDevOps = profileText.includes("kubernetes") || 
+                       profileText.includes("aws") || 
+                       profileText.includes("docker") || 
+                       profileText.includes("devops") || 
+                       profileText.includes("infrastructure");
+
+      let fallbackMatches: MatchRecommendation[] = [];
+
+      if (isML) {
+        fallbackMatches = [
+          {
+            roleId: "gig-111",
+            title: "Machine Learning Systems Engineer",
+            companyName: "NeuroFlow AI (YC W25)",
+            matchScore: 98,
+            whyYouMatch: "Your strong machine learning background and experience optimizing PyTorch/CUDA workflows maps directly onto NeuroFlow's distributed training requirements. Your ability to scale GPU-bound architectures ensures immediate value.",
+            alignmentHighlights: {
+              skillOverlap: ["Python", "PyTorch", "Machine Learning"],
+              insightCongruence: "Optimizing training loops and model quantization strategies for low-latency GPU setups."
+            }
+          },
+          {
+            roleId: "gig-112",
+            title: "AI Agent & NLP Developer",
+            companyName: "Cognitive Auto (Autonomous SaaS)",
+            matchScore: 91,
+            whyYouMatch: "Your expertise in AI agent loops and LangChain matches Cognitive Auto's goal to deploy production-grade LLM workflows. Your background in vector databases will help optimize prompt retrieval latency.",
+            alignmentHighlights: {
+              skillOverlap: ["Python", "LLM", "Vector Databases", "LangChain"],
+              insightCongruence: "Designing self-correcting agent chains and prompt retrieval pipelines."
+            }
+          },
+          {
+            roleId: "gig-105",
+            title: "Full Stack Engineer (Gemini API & LLM Integrations)",
+            companyName: "NextGen Concierge (B2B SaaS)",
+            matchScore: 85,
+            whyYouMatch: "Your experience with full-stack Node.js development and AI integration fits standard SaaS workflows using the Gemini API.",
+            alignmentHighlights: {
+              skillOverlap: ["TypeScript", "Node.js", "Gemini API", "LLM"],
+              insightCongruence: "Integrating model endpoints with secure API layers and responsive UI components."
+            }
           }
-        },
-        {
-          roleId: "gig-101",
-          title: "Senior Node/TypeScript Architect (Scaling Backend)",
-          companyName: "HyperSphere Logistics (YC W24)",
-          matchScore: 91,
-          whyYouMatch: "Your capability profile demonstrates robust mastery of structured TypeScript definitions and lock-free async execution patterns critical for their heavy routing pipeline.",
-          alignmentHighlights: {
-            skillOverlap: ["TypeScript", "Node.js", "Express", "PostgreSQL"],
-            insightCongruence: "Proven track record moving bulky API endpoints into high-availability microservices."
+        ];
+      } else if (isWeb3) {
+        fallbackMatches = [
+          {
+            roleId: "gig-102",
+            title: "Solidity & Smart Contract Auditor",
+            companyName: "Inertia Labs (Web3 Audit Guild)",
+            matchScore: 97,
+            whyYouMatch: "Your rigorous technical approach and security-first mindset align directly with Inertia Labs' smart contract audit pipelines.",
+            alignmentHighlights: {
+              skillOverlap: ["Solidity", "Smart Contracts", "Security", "Rust"],
+              insightCongruence: "Auditing EVM bytecode and optimizing gas consumption profiles."
+            }
+          },
+          {
+            roleId: "gig-107",
+            title: "High-Performance Systems Developer (Python/Rust)",
+            companyName: "OmniQuantum Solutions",
+            matchScore: 89,
+            whyYouMatch: "Your experience with memory-safe low-level systems programming fits OmniQuantum's molecular simulation engines perfectly.",
+            alignmentHighlights: {
+              skillOverlap: ["Rust", "Systems Programming", "Docker"],
+              insightCongruence: "Profiling memory allocations and streamlining thread locks."
+            }
+          },
+          {
+            roleId: "gig-101",
+            title: "Senior Node/TypeScript Architect (Scaling Backend)",
+            companyName: "HyperSphere Logistics (YC W24)",
+            matchScore: 82,
+            whyYouMatch: "Your strong engineering capabilities match HyperSphere's need for scaling core server infrastructure.",
+            alignmentHighlights: {
+              skillOverlap: ["TypeScript", "Node.js", "PostgreSQL"],
+              insightCongruence: "Monolithic server routes migration into Event pipelines."
+            }
           }
-        },
-        {
-          roleId: "gig-106",
-          title: "E-Commerce Headless UI Architect",
-          companyName: "HoloStore Retail (YC S23)",
-          matchScore: 84,
-          whyYouMatch: "You align perfectly with HoloStore's mandate to design an eye-safe, blazing fast multi-tenant shopping interface styled natively in pure Tailwind utility layout systems.",
-          alignmentHighlights: {
-            skillOverlap: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-            insightCongruence: "Advanced knowledge of server-side hydration and optimal typography parameters."
+        ];
+      } else if (isDevOps) {
+        fallbackMatches = [
+          {
+            roleId: "gig-104",
+            title: "Cloud Infrastructure Specialist (ScyllaDB / Kubernetes)",
+            companyName: "Pluto Compute",
+            matchScore: 98,
+            whyYouMatch: "Your systems background and experience managing AWS EKS matches Pluto Compute's requirements for secure high-availability deployments.",
+            alignmentHighlights: {
+              skillOverlap: ["Kubernetes", "AWS", "EKS", "Docker"],
+              insightCongruence: "Optimizing cluster scheduling rules and ScyllaDB replication strategies."
+            }
+          },
+          {
+            roleId: "gig-108",
+            title: "HIPAA Compliant Pipeline Engineer",
+            companyName: "BioFlow Systems",
+            matchScore: 92,
+            whyYouMatch: "Your experience building cloud ETL systems and secure pipeline layouts fits BioFlow's compliant logging policies.",
+            alignmentHighlights: {
+              skillOverlap: ["AWS", "Kubernetes", "Python", "Security"],
+              insightCongruence: "Designing secure KMS key cycles and parsing unstructured streams."
+            }
+          },
+          {
+            roleId: "gig-109",
+            title: "Database High Availability Architect",
+            companyName: "Veridical Finance Labs",
+            matchScore: 87,
+            whyYouMatch: "Your database background matches Veridical's multi-region PG failover needs under high transaction loads.",
+            alignmentHighlights: {
+              skillOverlap: ["PostgreSQL", "Redis", "AWS", "High Availability"],
+              insightCongruence: "Configuring primary-replica synchronization and database locking mitigations."
+            }
           }
-        }
-      ];
+        ];
+      } else {
+        fallbackMatches = [
+          {
+            roleId: "gig-103",
+            title: "Lead Frontend Engineer (NextJS & Framer/Motion)",
+            companyName: "Aether AI (Co-Pilot for Biotech)",
+            matchScore: 98,
+            whyYouMatch: "Your deep expertise in high-performance state architectures and responsive micro-interactions perfectly matches Aether AI's interactive genetic sequencing canvas.",
+            alignmentHighlights: {
+              skillOverlap: ["React", "TypeScript", "Tailwind CSS", "Framer Motion"],
+              insightCongruence: "Direct knowledge addressing redraw penalties and telemetry lag."
+            }
+          },
+          {
+            roleId: "gig-101",
+            title: "Senior Node/TypeScript Architect (Scaling Backend)",
+            companyName: "HyperSphere Logistics (YC W24)",
+            matchScore: 91,
+            whyYouMatch: "Your capability profile demonstrates robust mastery of structured TypeScript definitions and lock-free async execution patterns critical for their heavy routing pipeline.",
+            alignmentHighlights: {
+              skillOverlap: ["TypeScript", "Node.js", "Express", "PostgreSQL"],
+              insightCongruence: "Proven track record moving bulky API endpoints into high-availability microservices."
+            }
+          },
+          {
+            roleId: "gig-106",
+            title: "E-Commerce Headless UI Architect",
+            companyName: "HoloStore Retail (YC S23)",
+            matchScore: 84,
+            whyYouMatch: "You align perfectly with HoloStore's mandate to design an eye-safe, blazing fast multi-tenant shopping interface styled natively in pure Tailwind utility layout systems.",
+            alignmentHighlights: {
+              skillOverlap: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
+              insightCongruence: "Advanced knowledge of server-side hydration and optimal typography parameters."
+            }
+          }
+        ];
+      }
+
       setMatches(fallbackMatches);
       setSelectedMatch(fallbackMatches[0]);
       handleDraftProposalForMatch(targetProfile, fallbackMatches[0]);
