@@ -46,7 +46,53 @@ export function getGeminiClient(): GoogleGenAI {
  * - Agent 3: High-fidelity document generation & customized copy drafting - "gemini-3.5-flash"
  */
 export const MODELS = {
-  interviewer: "gemini-3.5-flash",
-  matchmaker: "gemini-3.5-flash",
-  outreachSpecialist: "gemini-3.5-flash",
+  interviewer: "gemini-2.5-flash",
+  matchmaker: "gemini-2.5-flash",
+  outreachSpecialist: "gemini-2.5-flash",
 };
+
+/**
+ * Safely executes a generateContent call. If it fails with a 429/quota error,
+ * it retries using the high-availability "gemini-3.1-flash-lite" model automatically
+ * before giving up and propagating/falling back to offline modes.
+ */
+export async function generateContentWithFallback(
+  ai: any,
+  params: {
+    model: string;
+    contents: any;
+    config?: any;
+  }
+): Promise<any> {
+  try {
+    return await ai.models.generateContent(params);
+  } catch (error: any) {
+    const errorStr = (typeof error === "object" ? JSON.stringify(error) : "") + (error.message || "") + "";
+    const isQuota = errorStr.includes("429") ||
+      errorStr.includes("RESOURCE_EXHAUSTED") ||
+      errorStr.includes("quota") ||
+      errorStr.includes("Quota");
+
+    if (isQuota) {
+      console.warn(
+        `[Quota Fallback] Active model '${params.model}' hit rate-limit (429/RESOURCE_EXHAUSTED). ` +
+        `Retrying with resilient lightweight 'gemini-3.1-flash-lite' model...`
+      );
+
+      const fallbackParams = {
+        ...params,
+        model: "gemini-3.1-flash-lite",
+      };
+
+      // If thinkingConfig is present, remove it as it is not supported for gemini-3.1-flash-lite
+      if (fallbackParams.config && fallbackParams.config.thinkingConfig) {
+        const cleanedConfig = { ...fallbackParams.config };
+        delete cleanedConfig.thinkingConfig;
+        fallbackParams.config = cleanedConfig;
+      }
+
+      return await ai.models.generateContent(fallbackParams);
+    }
+    throw error;
+  }
+}
