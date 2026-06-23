@@ -31,6 +31,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import InterviewerChat from "./components/InterviewerChat.tsx";
 import LoginPage from "./components/LoginPage.tsx";
+import LandingPage from "./components/LandingPage.tsx";
 import { UserCapabilityProfile, MatchRecommendation } from "./types/profile.ts";
 
 export default function App() {
@@ -40,6 +41,8 @@ export default function App() {
 
   // Auth State & Persistence
   const [user, setUser] = useState<any>(null);
+  const [showLanding, setShowLanding] = useState(true);
+
 
   // Theme: light ("Paper") / dark ("Ink") — persisted, defaults to system preference
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -217,11 +220,13 @@ export default function App() {
       setSelectedMatch(null);
       setProposalText("");
       setActiveStep("interview");
+      setShowLanding(true);
       showNotification("Account disconnected.", "info");
     } catch (err: any) {
       console.error("Logout failed:", err);
     }
   };
+
 
   // Dashboard Matching States (Agent 2)
   const [matches, setMatches] = useState<MatchRecommendation[]>([]);
@@ -573,6 +578,18 @@ export default function App() {
     </AnimatePresence>
   );
 
+  if (showLanding && !user) {
+    return (
+      <LandingPage
+        onEnter={() => setShowLanding(false)}
+        onSandboxBypass={handleTestUserMockLogin}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
+  }
+
+
   if (!user) {
     return (
       <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
@@ -586,6 +603,7 @@ export default function App() {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
