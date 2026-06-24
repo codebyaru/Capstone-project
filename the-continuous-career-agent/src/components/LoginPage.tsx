@@ -11,20 +11,21 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+;
+
+
 interface LoginPageProps {
-  onGoogleSignIn: (activeTab: "signin" | "signup") => Promise<void>;
+  onGoogleSignIn: (mode: "signin" | "signup") => Promise<void>;
+  onEmailSignIn: (email: string, pass: string) => Promise<void>;
+  onEmailSignUp: (email: string, pass: string, fullName: string) => Promise<void>;
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }
 
-export default function LoginPage({
-  onGoogleSignIn,
-  theme,
-  onToggleTheme
-}: LoginPageProps) {
+export default function LoginPage({ onGoogleSignIn, onEmailSignIn, onEmailSignUp }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [isBtnClicking, setIsBtnClicking] = useState(false);
-
+  
   // Email/Password states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,7 +48,7 @@ export default function LoginPage({
     setPassword("");
   };
 
-  const handleSignInAction = async () => {
+  const handleGoogleSignInAction = async () => {
     setIsBtnClicking(true);
     setErrorMsg("");
     setNotRegisteredWarning(false);
@@ -98,11 +99,11 @@ export default function LoginPage({
     } catch (err: any) {
       console.error("Auth submit error:", err);
       let displayError = err.message || "Authentication failed.";
-
+      
       // Determine if they are not yet a user to show a specialized signup suggestion pop warning
       if (
-        err.code === "auth/user-not-found" ||
-        err.message?.toLowerCase().includes("user not found") ||
+        err.code === "auth/user-not-found" || 
+        err.message?.toLowerCase().includes("user not found") || 
         err.message?.toLowerCase().includes("no user record") ||
         (activeTab === "signin" && err.code === "auth/invalid-credential")
       ) {
@@ -115,7 +116,7 @@ export default function LoginPage({
       } else if (err.code === "auth/weak-password") {
         displayError = "The chosen password does not satisfy secure Firebase policies.";
       }
-
+      
       setErrorMsg(displayError);
     } finally {
       setIsBtnClicking(false);
