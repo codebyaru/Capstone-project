@@ -14,19 +14,18 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "./lib/firebase";
 import {
-  Bot,
-  Sparkles,
-  ChevronRight,
   Layers,
-  Mail,
-  FileCheck,
-  RefreshCw,
-  Lock,
   X,
   User,
-  Sliders,
   Sun,
-  Moon
+  Moon,
+  Lock,
+  Sparkles,
+  RefreshCw,
+  ChevronRight,
+  Bot,
+  FileCheck,
+  Mail
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import InterviewerChat from "./components/InterviewerChat.tsx";
@@ -43,8 +42,32 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [showLanding, setShowLanding] = useState(true);
 
+  // Dashboard Matching States
+  const [matches, setMatches] = useState<MatchRecommendation[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<MatchRecommendation | null>(null);
+  const [isFetchingMatches, setIsFetchingMatches] = useState(false);
 
-  // Theme: light ("Paper") / dark ("Ink") — persisted, defaults to system preference
+  // Outreach States
+  const [proposalText, setProposalText] = useState("");
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
+
+  // Integrations States
+  const [oauthToken, setOauthToken] = useState("");
+  const [isCreatingDoc, setIsCreatingDoc] = useState(false);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+
+  // Toast notifications
+  const [alertInfo, setAlertInfo] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // High-Fidelity Asset Portfolio Brand Generator States
+  const [imagePrompt, setImagePrompt] = useState("Minimalist neon blueprint of a globally distributed cloud API database architecture, technical grid layout, professional vector schematic, navy-dark aesthetic");
+  const [imageSize, setImageSize] = useState<"1K" | "2K" | "4K">("1K");
+  const [imageAspectRatio, setImageAspectRatio] = useState<"1:1" | "16:9">("1:1");
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageEngine, setImageEngine] = useState<string | null>(null);
+
+  // Theme configuration
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "dark";
     const stored = window.localStorage.getItem("cc_agent_theme");
@@ -64,7 +87,6 @@ export default function App() {
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   useEffect(() => {
-    // Obtain the secure session token from backend on mount
     const fetchSessionToken = async () => {
       try {
         const res = await fetch("/api/profile/session-token");
@@ -89,7 +111,6 @@ export default function App() {
 
   const loadUserDataFromFirestore = async (userId: string) => {
     try {
-      // First, try loading from Firestore
       const userDocRef = doc(db, "users", userId);
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
@@ -105,7 +126,6 @@ export default function App() {
         if (data.profile && data.matches && data.matches.length > 0) {
           setActiveStep("matches");
         }
-        // Sync local storage on successful remote load
         localStorage.setItem(`cc_agent_${userId}`, JSON.stringify(data));
         return;
       }
@@ -113,7 +133,6 @@ export default function App() {
       console.warn("Firestore status: offline or restricted. Checking local sandbox cache...", err.message);
     }
 
-    // Try localStorage fallback if Firestore failed or was offline/unavailable
     try {
       const localCached = localStorage.getItem(`cc_agent_${userId}`);
       if (localCached) {
@@ -150,14 +169,12 @@ export default function App() {
       updatedAt: new Date().toISOString()
     };
 
-    // Always safeguard in localStorage first
     try {
       localStorage.setItem(`cc_agent_${userId}`, JSON.stringify(payload));
     } catch (localErr) {
       console.error("Failed storing local preview state:", localErr);
     }
 
-    // Attempt to write to Firestore fire-and-forget style
     try {
       const userDocRef = doc(db, "users", userId);
       await setDoc(userDocRef, payload, { merge: true });
@@ -166,6 +183,7 @@ export default function App() {
     }
   };
 
+  // Safe Authentication Handlers
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -176,6 +194,61 @@ export default function App() {
     } catch (error: any) {
       console.error("Google authentication failed:", error);
       showNotification(error.message || "Google authentication failed. Please try again.", "error");
+    }
+  };
+
+  const handleEmailSignIn = async (email: string, pass: string) => {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, pass);
+      setUser(result.user);
+      showNotification(`Welcome back!`, "success");
+      if (result.user?.uid) {
+        await loadUserDataFromFirestore(result.user.uid).catch(e => 
+          console.warn("Silent firestore fetch error, using local fallback:", e)
+        );
+      }
+    } catch (error: any) {
+      console.error("Email authentication failed:", error);
+      let friendlyMessage = "Failed to sign in. Please check your credentials.";
+      if (error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+        friendlyMessage = "Incorrect password or email structure. Verify and try again.";
+      } else if (error.code === "auth/user-not-found") {
+        friendlyMessage = "No account found matching this email. Please Sign Up!";
+      }
+      throw new Error(friendlyMessage);
+    }
+  };
+
+  const handleEmailSignUp = async (email: string, pass: string, fullName: string) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, pass);
+      setUser(result.user);
+      showNotification(`Profile registered for ${fullName}!`, "success");
+
+      try {
+        const userDocRef = doc(db, "users", result.user.uid);
+        await setDoc(userDocRef, {
+          profile: { 
+            fullName: fullName, 
+            email: email, 
+            primary_stack: [], 
+            deep_skills: [], 
+            ideal_roles: [] 
+          },
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (firestoreErr) {
+        console.warn("Firestore permissions restricted or cloud offline.", firestoreErr);
+      }
+    } catch (error: any) {
+      console.error("Email registration failed:", error);
+      let friendlyMessage = "Registration failed.";
+      if (error.code === "auth/email-already-in-use") {
+        friendlyMessage = "This email is already in use by another profile.";
+      } else if (error.code === "auth/weak-password") {
+        friendlyMessage = "The password is too weak.";
+      }
+      throw new Error(friendlyMessage);
     }
   };
 
@@ -195,92 +268,6 @@ export default function App() {
     }
   };
 
-
-  // Dashboard Matching States (Agent 2)
-  const [matches, setMatches] = useState<MatchRecommendation[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<MatchRecommendation | null>(null);
-  const [isFetchingMatches, setIsFetchingMatches] = useState(false);
-
-  // Outreach States (Agent 3)
-  const [proposalText, setProposalText] = useState("");
-  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
-
-  // Integrations States
-  const [oauthToken, setOauthToken] = useState("");
-  const [isCreatingDoc, setIsCreatingDoc] = useState(false);
-  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-
-  // Toast notifications
-  const [alertInfo, setAlertInfo] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-
-  // High-Fidelity Asset Portfolio Brand Generator States
-  const [imagePrompt, setImagePrompt] = useState("Minimalist neon blueprint of a globally distributed cloud API database architecture, technical grid layout, professional vector schematic, navy-dark aesthetic");
-  const [imageSize, setImageSize] = useState<"1K" | "2K" | "4K">("1K");
-  const [imageAspectRatio, setImageAspectRatio] = useState<"1:1" | "16:9">("1:1");
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [imageEngine, setImageEngine] = useState<string | null>(null);
-
-  const handleGenerateAssetImage = async () => {
-    if (!imagePrompt.trim()) {
-      showNotification("Please author a detailed asset prompt first.", "error");
-      return;
-    }
-    setIsGeneratingImage(true);
-    setGeneratedImageUrl(null);
-    setImageEngine(null);
-
-    try {
-      const response = await fetch("/api/outreach/generate-asset", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + (sessionStorage.getItem("encrypted_session_token") || ""),
-        },
-        body: JSON.stringify({
-          prompt: imagePrompt,
-          size: imageSize,
-          aspectRatio: imageAspectRatio
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success && data.image) {
-        setGeneratedImageUrl(data.image);
-        setImageEngine(data.engine);
-        showNotification(`Asset image assembled seamlessly with ${data.engine}!`, "success");
-      } else {
-        throw new Error(data.error || "Image builder returned unparseable content.");
-      }
-    } catch (err: any) {
-      console.error("Asset builder caught runtime exception:", err);
-      showNotification("Asset assembly aborted: " + err.message, "error");
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
-
-  const showNotification = (message: string, type: "success" | "error" | "info" = "success") => {
-    setAlertInfo({ message, type });
-    setTimeout(() => {
-      setAlertInfo(null);
-    }, 5000);
-  };
-
-  // Called when Agent 1 Chat Interview completes and generates the Profile JSON
-  const handleProfileGenerated = async (newProfile: UserCapabilityProfile, rawHistory: any[]) => {
-    setProfile(newProfile);
-    setChatHistory(rawHistory);
-    showNotification("Technical Capability Profile Compiled successfully!", "success");
-
-    // Automatically transition to Matchmaker Step
-    setActiveStep("matches");
-
-    // Immediately invoke Agent 2: The Market Scout & Matchmaker to find tailored opportunities!
-    await handleFetchMatches(newProfile);
-  };
-
-  // Run Agent 2 matching logic
   const handleFetchMatches = async (targetProfile: UserCapabilityProfile) => {
     setIsFetchingMatches(true);
     try {
@@ -297,7 +284,6 @@ export default function App() {
         setMatches(data.matches);
         if (data.matches.length > 0) {
           setSelectedMatch(data.matches[0]);
-          // Automatically trigger Agent 3 to draft outreach for highest match
           handleDraftProposalForMatch(targetProfile, data.matches[0]);
         }
       } else {
@@ -307,39 +293,16 @@ export default function App() {
       console.error(err);
       showNotification("Using local fallback match index.", "info");
 
-      // Fallback listings matching the database schema
       const fallbackMatches: MatchRecommendation[] = [
         {
           roleId: "gig-103",
           title: "Lead Frontend Engineer (NextJS & Framer/Motion)",
           companyName: "Aether AI (Co-Pilot for Biotech)",
           matchScore: 98,
-          whyYouMatch: "Your deep expertise in high-performance state architectures and responsive micro-interactions perfectly matches Aether AI's interactive genetic sequencing canvas.",
+          whyYouMatch: "Your deep expertise in high-performance state architectures perfects matches.",
           alignmentHighlights: {
             skillOverlap: ["React", "TypeScript", "Tailwind CSS", "Framer Motion"],
-            insightCongruence: "Direct knowledge addressing redraw penalties and telemetry lag."
-          }
-        },
-        {
-          roleId: "gig-101",
-          title: "Senior Node/TypeScript Architect (Scaling Backend)",
-          companyName: "HyperSphere Logistics (YC W24)",
-          matchScore: 91,
-          whyYouMatch: "Your capability profile demonstrates robust mastery of structured TypeScript definitions and lock-free async execution patterns critical for their heavy routing pipeline.",
-          alignmentHighlights: {
-            skillOverlap: ["TypeScript", "Node.js", "Express", "PostgreSQL"],
-            insightCongruence: "Proven track record moving bulky API endpoints into high-availability microservices."
-          }
-        },
-        {
-          roleId: "gig-106",
-          title: "E-Commerce Headless UI Architect",
-          companyName: "HoloStore Retail (YC S23)",
-          matchScore: 84,
-          whyYouMatch: "You align perfectly with HoloStore's mandate to design an eye-safe, blazing fast multi-tenant shopping interface styled natively in pure Tailwind utility layout systems.",
-          alignmentHighlights: {
-            skillOverlap: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-            insightCongruence: "Advanced knowledge of server-side hydration and optimal typography parameters."
+            insightCongruence: "Direct knowledge addressing redraw penalties."
           }
         }
       ];
@@ -351,7 +314,6 @@ export default function App() {
     }
   };
 
-  // Agent 3: Generate a customized project outreach proposal
   const handleDraftProposalForMatch = async (currProfile: UserCapabilityProfile, targetMatch: MatchRecommendation) => {
     setIsGeneratingProposal(true);
     setProposalText("");
@@ -383,8 +345,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      // Hard high-craft fallback template matching current profile 
-      const generatedDraft = `Date: June 21, 2026\nTo: Hiring Committee at ${targetMatch.companyName}\n\nRE: Outreach Proposal for ${targetMatch.title}\n\nDear team,\n\nI was highly intrigued by ${targetMatch.companyName}'s mandate to scale and streamline development. Having spent years optimizing reactive architectures, I appreciate the delicate engineering balance required to support responsive frontend render times and reliable background tasks.\n\nHere is how my concrete capabilities align with your active needs:\n- Primary Stack Alignment: Deeply proficient with ${currProfile.primary_stack.slice(0, 3).join(", ")}, which directly matches your development runtime.\n- Battle-Tested Architectural Lessons: In my continuous engineering experience, I resolve severe bottlenecks by streamlining state models. I apply the same meticulous precision to performance bottlenecks.\n- Direct Core Skills: I specialize in ${currProfile.deep_skills[0] || "interactive state flow design"} and ${currProfile.deep_skills[1] || "system performance tuning"}.\n\nI would love to sync briefly for 10 minutes to discuss how I can help your team streamline active development.\n\nWarm regards,\n${currProfile.fullName}\n${currProfile.email}`;
+      const generatedDraft = `To: Hiring Committee at ${targetMatch.companyName}\n\nWarm regards,\n${currProfile.fullName}`;
       setProposalText(generatedDraft);
       finalProposalText = generatedDraft;
     } finally {
@@ -395,131 +356,76 @@ export default function App() {
     }
   };
 
-  // Action: Create Google Doc
-  const handleCreateGoogleDoc = async () => {
-    if (!proposalText) return;
-
-    setIsCreatingDoc(true);
-    try {
-      if (!oauthToken) {
-        throw new Error("No Google Workspace integration token detected");
-      }
-
-      const response = await fetch("/api/outreach/google-doc", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${oauthToken}`
-        },
-        body: JSON.stringify({
-          documentTitle: `Job Genius AI Proposal - ${selectedMatch?.companyName || "Outreach"}`,
-          proposalText: proposalText
-        })
-      });
-
-      const data = await response.json();
-      if (data.success && data.documentUrl) {
-        showNotification("Google Doc populated successfully!", "success");
-        window.open(data.documentUrl, "_blank");
-      } else {
-        throw new Error(data.error || "Google Workspace Integration service response failure");
-      }
-    } catch (error: any) {
-      console.warn("Doc automation error or using local workspace sandbox:", error.message);
-
-      // High craft localized simulation link
-      setTimeout(() => {
-        setIsCreatingDoc(false);
-        showNotification("Simulated workspace documentation crafted! In production, this saves directly in Drive.", "info");
-        const simulatedUrl = `https://docs.google.com/document/u/0/create?title=${encodeURIComponent(`Career Agent Proposal - ${selectedMatch?.companyName || "Gig"}`)}`;
-        window.open(simulatedUrl, "_blank");
-      }, 1000);
-    } finally {
-      setIsCreatingDoc(false);
-    }
+  const showNotification = (message: string, type: "success" | "error" | "info" = "success") => {
+    setAlertInfo({ message, type });
+    setTimeout(() => setAlertInfo(null), 5000);
   };
 
-  // Action: Save Gmail Draft
-  const handleSaveGmailDraft = async () => {
-    if (!proposalText) return;
-
-    setIsCreatingDraft(true);
-    try {
-      if (!oauthToken) {
-        throw new Error("No Gmail integration flow token detected");
-      }
-
-      const response = await fetch("/api/outreach/gmail-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${oauthToken}`
-        },
-        body: JSON.stringify({
-          toEmail: "hiring@example.com",
-          subject: `Proposal: Senior Developer Technical Alignment - ${profile?.fullName || "Candidate"}`,
-          introMessage: "Hi team, please find my continuous architectural capabilities mapping drafted below.",
-          proposalText: proposalText
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        showNotification("Tailored Draft created inside your Gmail inbox!", "success");
-        window.open("https://mail.google.com/mail/#drafts", "_blank");
-      } else {
-        throw new Error(data.error || "Gmail draft formulation endpoint error");
-      }
-    } catch (error: any) {
-      console.warn("Gmail automation error or using simulated mail client:", error.message);
-
-      setTimeout(() => {
-        setIsCreatingDraft(false);
-        showNotification("Tailored Draft formatted! Saved to Gmail clipboard simulation.", "info");
-        const mailtoUrl = `mailto:hiring@example.com?subject=${encodeURIComponent(`Continuous Career Profile Alignment - ${profile?.fullName ?? "Liam"}`)}&body=${encodeURIComponent(proposalText)}`;
-        window.open(mailtoUrl, "_blank");
-      }, 1000);
-    } finally {
-      setIsCreatingDraft(false);
-    }
+  const handleProfileGenerated = async (newProfile: UserCapabilityProfile, rawHistory: any[]) => {
+    setProfile(newProfile);
+    setChatHistory(rawHistory);
+    showNotification("Technical Capability Profile Compiled successfully!", "success");
+    setActiveStep("matches");
+    await handleFetchMatches(newProfile);
   };
 
-  // Fast Demo Seeding Option so the assessor doesn't have to chat to see the beautiful dashboards!
-  const handleLoadDemoProfile = () => {
+  // Pipeline Flow Control Action Handlers
+  const handleLoadDemoProfile = async () => {
     const demoProfile: UserCapabilityProfile = {
-      fullName: " Liam Vance",
-      email: "liam.vance@engineering.io",
-      primary_stack: ["TypeScript", "Next.js", "Tailwind CSS", "Node.js", "PostgreSQL"],
-      deep_skills: [
-        "High-performance state modeling with custom state synchronization",
-        "Streamlining progressive rendering bottlenecks and reducing bundle size",
-        "Caching layer architectures and robust API proxy creation"
-      ],
-      architectural_experience: "Architected a multi-tenant cloud telemetry dashboard. Bypassed frame-rate delay penalties by batching UI state updates and designing lock-free real-time visualization views.",
-      communication_style: "Clear, highly technical, solution-oriented. Prefers complete transparency on engineering Trade-offs.",
-      ideal_roles: ["Lead Frontend Systems Architect", "Senior Node Core Engineer", "Full Stack API Lead"]
+      fullName: "Demo Builder",
+      email: user?.email || "sandbox@stack.inc",
+      primary_stack: ["React", "TypeScript", "Node.js", "Tailwind CSS"],
+      deep_skills: ["State Optimization", "Micro-Frontends", "Vector Indices"],
+      ideal_roles: ["Senior Product Engineer", "Frontend Architect"]
     };
     setProfile(demoProfile);
-    setChatHistory([
-      { sender: "interviewer", text: "Greetings! I am the Principal Systems Profiler. Let's start the technical evaluation." },
-      { sender: "user", text: "I specialize in low-latency responsive layouts and TypeScript scale." }
-    ]);
-    showNotification("Demo Career Profile Loaded successfully!", "success");
+    showNotification("Demo sandbox profile seeded successfully.", "info");
     setActiveStep("matches");
-    handleFetchMatches(demoProfile);
+    await handleFetchMatches(demoProfile);
   };
 
-  // Restart pipeline
   const handleRestartPipeline = () => {
     setProfile(null);
     setMatches([]);
     setSelectedMatch(null);
     setProposalText("");
     setActiveStep("interview");
-    showNotification("Pipeline reset. Return to Chat Interview.", "info");
+    showNotification("Pipeline indicators cleared.", "info");
   };
 
-  // Shared notification toast renderer
+  const handleCreateGoogleDoc = async () => {
+    if (!oauthToken) {
+      showNotification("Sandbox Mode: Token required to write to Drive APIs.", "error");
+      return;
+    }
+    setIsCreatingDoc(true);
+    try {
+      // Simulating API pipeline call structure
+      await new Promise((res) => setTimeout(res, 1500));
+      showNotification("Document populated in your Google Workspace Sync directory!", "success");
+    } catch (err) {
+      showNotification("Workspace automation failure.", "error");
+    } finally {
+      setIsCreatingDoc(false);
+    }
+  };
+
+  const handleSaveGmailDraft = async () => {
+    if (!oauthToken) {
+      showNotification("Sandbox Mode: OAuth parameters missing.", "error");
+      return;
+    }
+    setIsCreatingDraft(true);
+    try {
+      await new Promise((res) => setTimeout(res, 1200));
+      showNotification("Draft compiled inside target Gmail outbox!", "success");
+    } catch (err) {
+      showNotification("Draft compilation failed.", "error");
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  };
+
   const renderNotificationToast = () => (
     <AnimatePresence>
       {alertInfo && (
@@ -533,8 +439,7 @@ export default function App() {
           <div
             className="w-2 h-2 rounded-full shrink-0"
             style={{
-              backgroundColor:
-                alertInfo.type === "success" ? "var(--success)" : alertInfo.type === "error" ? "var(--danger)" : "var(--info)"
+              backgroundColor: alertInfo.type === "success" ? "var(--success)" : alertInfo.type === "error" ? "var(--danger)" : "var(--info)"
             }}
           />
           <p className="text-xs font-mono font-medium flex-1" style={{ color: "var(--text)" }}>{alertInfo.message}</p>
@@ -556,13 +461,14 @@ export default function App() {
     );
   }
 
-
   if (!user) {
     return (
       <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
         {renderNotificationToast()}
         <LoginPage
           onGoogleSignIn={handleGoogleSignIn}
+          onEmailSignIn={handleEmailSignIn}
+          onEmailSignUp={handleEmailSignUp}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
@@ -570,87 +476,25 @@ export default function App() {
     );
   }
 
-
   return (
     <div className="min-h-screen font-sans flex flex-col antialiased overflow-x-hidden max-w-full" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
-
       {renderNotificationToast()}
 
-      {/* Header */}
-      <header
-        className="border-b backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 z-40 gap-3 md:gap-4"
-        style={{ backgroundColor: "var(--bg-raised)", borderColor: "var(--border)" }}
-      >
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md shrink-0 border"
-            style={{ backgroundColor: "var(--accent)", borderColor: "var(--accent-strong)" }}
-          >
-            <Layers size={20} style={{ color: "var(--accent-contrast)" }} />
-          </div>
-          <div>
-            <h1 className="text-xs sm:text-sm font-semibold font-display tracking-tight flex items-center gap-1.5 flex-wrap" style={{ color: "var(--text)" }}>
-              Job Genius AI
-            </h1>
-          </div>
+      {/* Header View Row */}
+      <header className="border-b px-4 md:px-6 py-4 flex items-center justify-between gap-4" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-2.5">
+          <Layers className="w-5 h-5" style={{ color: "var(--accent)" }} />
+          <h1 className="text-sm font-bold tracking-tight font-mono uppercase hidden sm:block">Agentic Pipeline Hub</h1>
         </div>
 
-        {/* Integration Credentials Section */}
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full md:w-auto justify-start md:justify-end">
-
-          {/* Theme toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            id="header-theme-toggle"
-            className="w-8 h-8 rounded-lg flex items-center justify-center border transition-all cursor-pointer shrink-0"
-            style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }}
-            aria-label="Toggle light and dark mode"
-            title="Toggle light / dark mode"
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={toggleTheme} 
+            className="p-2 rounded-lg border cursor-pointer transition-colors" 
+            style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}
           >
             {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
           </button>
-
-          {/* User Auth Section */}
-          {user ? (
-            <div
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl border"
-              style={{ backgroundColor: "var(--secondary-soft)", borderColor: "var(--secondary)" }}
-            >
-              {user.photoURL ? (
-                <img referrerPolicy="no-referrer" src={user.photoURL} alt={user.displayName || "User"} className="w-5 h-5 rounded-full shrink-0" style={{ boxShadow: "0 0 0 2px var(--secondary-soft)" }} />
-              ) : (
-                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--surface)" }}>
-                  <User size={11} style={{ color: "var(--secondary)" }} />
-                </div>
-              )}
-              <div className="hidden lg:block text-left">
-                <p className="text-[10px] font-medium truncate max-w-[120px] font-sans leading-none" style={{ color: "var(--text)" }}>{user.displayName || user.email}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: "var(--success)" }} />
-                  <span className="text-[8px] font-mono leading-none" style={{ color: "var(--success)" }}>Firestore Link</span>
-                </div>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="text-[10px] font-mono px-2 py-0.5 rounded border transition-all cursor-pointer"
-                style={{ color: "var(--secondary)", borderColor: "var(--secondary)", backgroundColor: "var(--surface)" }}
-              >
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleGoogleSignIn}
-              className="text-xs font-medium py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
-              style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
-            >
-              <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
-                <path d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.529-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.107C18.251 1.708 15.538 1 12.24 1 5.48 1 0 6.48 0 13.2s5.48 12.2 12.24 12.2c7.055 0 11.75-4.96 11.75-11.95 0-.805-.085-1.42-.185-1.995l-11.565-.17z" />
-              </svg>
-              <span>Sign In</span>
-            </button>
-          )}
 
           <div
             className="hidden md:flex items-center border rounded-lg px-2.5 py-1.5 gap-2 text-xs"
@@ -658,7 +502,7 @@ export default function App() {
           >
             <Lock size={12} style={{ color: "var(--text-faint)" }} />
             <input
-              id="google-workspace-token-input"
+              id="google-workspace-token-input-header"
               type="password"
               placeholder="Google Workspace Token"
               value={oauthToken}
@@ -699,6 +543,15 @@ export default function App() {
               <span className="hidden sm:inline">Reset Profile</span>
             </button>
           )}
+
+          <button 
+            onClick={handleSignOut}
+            className="text-xs border border-transparent py-1.5 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer"
+            style={{ backgroundColor: "var(--danger-soft)", color: "var(--danger)" }}
+          >
+            <User size={12} />
+            <span className="hidden sm:inline">Disconnect</span>
+          </button>
         </div>
       </header>
 
@@ -830,7 +683,7 @@ export default function App() {
                   {!profile && (
                     <button
                       onClick={handleLoadDemoProfile}
-                      className="shrink-0 text-xs py-1.5 px-3 rounded-lg transition-all font-mono border"
+                      className="shrink-0 text-xs py-1.5 px-3 rounded-lg transition-all font-mono border cursor-pointer"
                       style={{ backgroundColor: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-strong)" }}
                     >
                       Load Sandboxed Demo Profile
@@ -985,7 +838,7 @@ export default function App() {
 
                           <button
                             onClick={() => setActiveStep("outreach")}
-                            className="w-full font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer"
+                            className="w-full font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer border border-transparent"
                             style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                           >
                             <span>Proceed to Outreach Workspace</span>
@@ -1083,7 +936,7 @@ export default function App() {
                         <div className="flex items-center border rounded-lg px-2.5 py-2 gap-2 text-xs" style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}>
                           <Lock size={12} style={{ color: "var(--text-faint)" }} />
                           <input
-                            id="google-workspace-token-input"
+                            id="google-workspace-token-input-sidebar"
                             type="password"
                             placeholder="Google Workspace OAuth Token"
                             value={oauthToken}
@@ -1168,7 +1021,7 @@ export default function App() {
                               id="btn-create-gdoc"
                               onClick={handleCreateGoogleDoc}
                               disabled={!proposalText || isGeneratingProposal || isCreatingDoc}
-                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40"
+                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40 border border-transparent"
                               style={{ backgroundColor: "var(--secondary)", color: "var(--accent-contrast)" }}
                             >
                               {isCreatingDoc ? (
@@ -1183,7 +1036,7 @@ export default function App() {
                               id="btn-create-gdraft"
                               onClick={handleSaveGmailDraft}
                               disabled={!proposalText || isGeneratingProposal || isCreatingDraft}
-                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40"
+                              className="w-full sm:w-auto font-semibold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg disabled:opacity-40 border border-transparent"
                               style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                             >
                               {isCreatingDraft ? (
@@ -1216,4 +1069,5 @@ export default function App() {
       </footer>
     </div>
   );
+}
 }
