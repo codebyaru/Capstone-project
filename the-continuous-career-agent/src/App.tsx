@@ -9,7 +9,8 @@ import {
   signInWithPopup, 
   signOut,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "./lib/firebase";
@@ -164,16 +165,68 @@ export default function App() {
       const result = await signInWithPopup(auth, googleProvider);
       const currentUser = result.user;
       setUser(currentUser);
+      
+      // Capture the Google OAuth access token for Google Docs API calls
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+      const idToken = credential?.idToken;
+
+      console.log("Google Sign-In Debug:", { hasAccessToken: !!accessToken, hasIdToken: !!idToken });
+
+      // IMPORTANT: Workspace REST APIs (Docs/Gmail) require a real OAuth ACCESS TOKEN.
+      // Never use idToken for these calls.
+      let tokenToUse = accessToken;
+
+      if (!tokenToUse) {
+        // Last resort: the raw OAuth token might be in the result object
+        const firebaseCredential = result.credential as any;
+        tokenToUse = firebaseCredential?.accessToken;
+      }
+
+      if (!tokenToUse) {
+        console.warn("No Google OAuth accessToken returned (Workspace integration not usable).", {
+          hasAccessToken: !!accessToken,
+          hasIdToken: !!idToken,
+        });
+        showNotification(
+          "Google signed in, but no OAuth access token was returned for Workspace APIs. Please reauthorize (Google button again) so Docs/Gmail scopes are granted.",
+          "warning"
+        );
+      }
+
+      if (tokenToUse) {
+        sessionStorage.setItem("google_oauth_token", tokenToUse);
+        setOauthToken(tokenToUse);
+        showNotification("Google authenticated! Workspace integration enabled.", "success");
+      } else {
+        console.warn("⚠️ No OAuth token returned from Google Sign-In. Check OAuth consent screen.");
+        showNotification("Sign-in successful, but Google Workspace integration unavailable. Please reauthorize.", "warning");
+      }
+
       showNotification(`Welcome back, ${currentUser.displayName || "Developer"}!`, "success");
       await loadUserDataFromFirestore(currentUser.uid);
     } catch (error: any) {
-      console.warn("Google credentials prompt failed inside context:", error);
-      if (error.code === "auth/popup-blocked" || error.code === "auth/iframe-directory-not-supported" || error.code === "auth/operation-not-allowed") {
-        showNotification("Google Authenticator block inside browser frame. Launching secure Sandbox login...", "info");
-      } else {
-        showNotification("Auth notice, setting sandbox login configuration.", "info");
+      console.error("Google credentials prompt failed inside context:", error);
+      const blockedErrors = [
+        "auth/popup-blocked",
+        "auth/iframe-directory-not-supported",
+        "auth/operation-not-allowed"
+      ];
+      if (blockedErrors.includes(error?.code)) {
+        showNotification("Google auth blocked by the browser or frame restrictions. Using sandbox fallback.", "warning");
+        await handleTestUserMockLogin();
+        return;
       }
-      await handleTestUserMockLogin();
+
+      if (error?.code === "auth/popup-closed-by-user") {
+        showNotification("Google sign-in was cancelled. Please try again to grant Workspace access.", "error");
+        return;
+      }
+
+      showNotification(
+        error?.message || "Google sign-in failed. Check OAuth consent settings and browser popup permissions.",
+        "error"
+      );
     }
   };
 
@@ -233,6 +286,13 @@ export default function App() {
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   
+  useEffect(() => {
+    const savedOauth = sessionStorage.getItem("google_oauth_token");
+    if (savedOauth) {
+      setOauthToken(savedOauth);
+    }
+  }, []);
+  
   // Toast notifications
   const [alertInfo, setAlertInfo] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -283,8 +343,8 @@ export default function App() {
     }
   };
 
-  const showNotification = (message: string, type: "success" | "error" | "info" = "success") => {
-    setAlertInfo({ message, type });
+  const showNotification = (message: string, type: "success" | "error" | "info" | "warning" = "success") => {
+    setAlertInfo({ message, type: type === "warning" ? "info" : type });
     setTimeout(() => {
       setAlertInfo(null);
     }, 5000);
@@ -421,13 +481,46 @@ export default function App() {
   // Action: Create Google Doc
   const handleCreateGoogleDoc = async () => {
     if (!proposalText) return;
-    
+
     setIsCreatingDoc(true);
     try {
       if (!oauthToken) {
         throw new Error("No Google Workspace integration token detected");
       }
 
+      console.log("📄 Starting Google Docs creation...");
+      console.log("✅ OAuth Token present:", oauthToken.substring(0, 20) + "...");
+      console.log("✅ Proposal text length:", proposalText.length, "characters");
+
+
+      // Always create a blank doc first so the user sees something immediately.
+      const documentTitle = `Continuous Career Agent Proposal - ${selectedMatch?.companyName || "Outreach"}`;
+
+      const blankRes = await fetch("/api/outreach/google-doc/blank", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${oauthToken}`
+        },
+        body: JSON.stringify({ documentTitle })
+      });
+
+      const blankData = await blankRes.json();
+      const documentId = blankData?.documentId;
+
+  console.log("📄 Blank doc response:", { success: blankData.success, documentId, simulated: blankData.simulated });
+
+      if (blankData.success && blankData.documentUrl) {
+        window.open(blankData.documentUrl, "_blank");
+      }
+
+      // If we don't have OAuth, stop here (blank doc URL is already opened by the backend simulation).
+      if (!oauthToken || !documentId) {
+          console.warn("⚠️ Stopping: No real documentId. Using simulated Google Docs URL.");
+        return;
+      }
+
+      // Populate the SAME doc with proposal text.
       const response = await fetch("/api/outreach/google-doc", {
         method: "POST",
         headers: {
@@ -435,20 +528,25 @@ export default function App() {
           "Authorization": `Bearer ${oauthToken}`
         },
         body: JSON.stringify({
-          documentTitle: `Continuous Career Agent Proposal - ${selectedMatch?.companyName || "Outreach"}`,
+          documentTitle,
+          documentId,
           proposalText: proposalText
         })
       });
 
       const data = await response.json();
+      console.log("📄 Document update response:", { success: data.success, error: data.error });
+
       if (data.success && data.documentUrl) {
         showNotification("Google Doc populated successfully!", "success");
         window.open(data.documentUrl, "_blank");
       } else {
-        throw new Error(data.error || "Google Workspace Integration service response failure");
+        const serverError = data.error || "Google Workspace Integration service response failure";
+        const details = data.details ? ` Details: ${data.details}` : "";
+        throw new Error(`${serverError}${details}`);
       }
     } catch (error: any) {
-      console.warn("Doc automation error or using local workspace sandbox:", error.message);
+      console.warn("Doc automation error or using local workspace sandbox:", error?.message || error);
       
       // High craft localized simulation link
       setTimeout(() => {

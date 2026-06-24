@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import { getGeminiClient, MODELS } from "../utils/gemini.js";
-import { Type, ThinkingLevel } from "@google/genai";
+import { Type } from "@google/genai";
 import { UserCapabilityProfile } from "../../src/types/profile.js";
 import { 
   sanitizeUserProfile, 
@@ -16,6 +16,12 @@ import {
 import { onStateHandover } from "../../config/antigravity.config.js";
 
 const router = Router();
+
+// Capability profile compilation model (used by POST /api/profile/compile)
+// This was referenced but never imported/defined, causing runtime errors.
+const PROFILE_COMPILE_MODEL =
+  process.env.GEMINI_PROFILE_COMPILE_MODEL || "gemini-2.5-flash";
+
 
 /**
  * GET /api/profile/session-token
@@ -106,14 +112,45 @@ If we have a currentResumeText or tech stack provided and the chatHistory is emp
       ]
     });
   } catch (error: any) {
-    console.error("Agent 1 (Interviewer) Error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to generate interview response",
-      details: error.message,
+    console.warn("Agent 1 (Interviewer) fallback due to Gemini unavailable:", error.message || error);
+    const { chatHistory: rawChatHistory = [], currentResumeText: rawCurrentResumeText = "" } = req.body || {};
+    const fallbackQuestion = generateLocalInterviewQuestion(rawChatHistory, rawCurrentResumeText || "");
+    const nextChatHistory = [
+      ...rawChatHistory,
+      { role: "model", text: fallbackQuestion },
+    ];
+
+
+    res.json({
+      success: true,
+      nextQuestion: fallbackQuestion,
+      chatHistory: [
+        ...rawChatHistory,
+        { role: "model", text: fallbackQuestion }
+      ]
     });
   }
 });
+
+function generateLocalInterviewQuestion(chatHistory: any[], currentResumeText: string): string {
+  const userAnswers = chatHistory.filter((msg: any) => msg.role === "user").map((msg: any) => msg.text || "");
+  const count = userAnswers.length;
+
+  if (count === 0) {
+    return "Welcome! To begin, what technology stacks do you enjoy building with most often?";
+  }
+  if (count === 1) {
+    return "Great! Can you describe one recent system or project you built and the architecture you chose for it?";
+  }
+  if (count === 2) {
+    return "Nice. What was the most difficult engineering challenge in that project, and how did you solve it?";
+  }
+  if (count === 3) {
+    return "Thanks. How do you usually balance performance, reliability, and developer speed when designing a system?";
+  }
+
+  return "[INTERVIEW_COMPLETE] Understood! Our continuous profiling session is completed successfully. I have fully extracted your high-value engineering trade-off capabilities! Click the button below to compile your Capability Profile.";
+}
 
 function performLocalProfileCompilation(chatHistory: any[]): UserCapabilityProfile {
   let fullName = "Expert Developer";
@@ -210,7 +247,7 @@ router.post("/compile", validateSessionHeader, async (req: Request, res: Respons
 Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills, architectural_experience (with specific trade-offs and decision justifications), observed communication_style, and ideal_roles. Keep details structured and informative.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: PROFILE_COMPILE_MODEL,
       contents: [
         {
           role: "user",
@@ -219,9 +256,8 @@ Analyze the candidate's answers deeply. Extract their primary_stack, deep_skills
       ],
       config: {
         systemInstruction: compilePrompt,
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.HIGH,
-        },
+        // NOTE: thinkingLevel is not supported on some Gemini models (caused INVALID_ARGUMENT).
+        // To keep compilation reliable, we omit thinkingConfig.
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

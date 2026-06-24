@@ -18,6 +18,7 @@ export function getGeminiClient(): GoogleGenAI {
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
+
   if (!apiKey) {
     throw new Error(
       "GEMINI_API_KEY environment variable is not defined. " +
@@ -46,7 +47,7 @@ export function getGeminiClient(): GoogleGenAI {
  * - Agent 3: High-fidelity document generation & customized copy drafting - "gemini-3.5-flash"
  */
 export const MODELS = {
-  interviewer: "gemini-3.5-flash",
-  matchmaker: "gemini-3.5-flash",
-  outreachSpecialist: "gemini-3.5-flash",
+  interviewer: process.env.GEMINI_INTERVIEWER_MODEL || "gemini-2.5-flash",
+  matchmaker: process.env.GEMINI_MATCHMAKER_MODEL || "gemini-2.5-flash",
+  outreachSpecialist: process.env.GEMINI_OUTREACH_MODEL || "gemini-2.5-flash",
 };

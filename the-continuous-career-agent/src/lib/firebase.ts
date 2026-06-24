@@ -10,4 +10,10 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
+googleProvider.setCustomParameters({ prompt: "consent" });
+// Add only the workspace scopes needed for document creation and draft compose
+googleProvider.addScope("https://www.googleapis.com/auth/documents");
+googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+googleProvider.addScope("https://www.googleapis.com/auth/gmail.compose");
+
 export default app;

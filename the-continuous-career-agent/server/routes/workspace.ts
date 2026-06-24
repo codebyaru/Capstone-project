@@ -73,8 +73,8 @@ ${email}`;
 router.post("/draft-proposal", validateSessionHeader, async (req: Request, res: Response): Promise<void> => {
   const { profile, job } = req.body;
   if (!profile || !job) {
-     res.status(400).json({ success: false, error: "Both capability profile and target job are required for drafting outreach copy." });
-     return;
+    res.status(400).json({ success: false, error: "Both capability profile and target job are required for drafting outreach copy." });
+    return;
   }
 
   // Securely log the incoming request
@@ -117,6 +117,7 @@ Guidelines:
       success: true,
       proposalText: response.text || "Failed to generate outreach text."
     });
+    return;
   } catch (error: any) {
     console.warn("Agent 3 (Outreach Specialist) Gemini calling failed, falling back to local high-fidelity generator.", error.message || error);
     try {
@@ -125,6 +126,7 @@ Guidelines:
         success: true,
         proposalText: generatedDraft
       });
+      return;
     } catch (fallbackError: any) {
       console.error("Agent 3 Fallback generation failed:", fallbackError);
       res.status(500).json({
@@ -132,6 +134,7 @@ Guidelines:
         error: "Failed to generate proposal copy copy",
         details: fallbackError.message,
       });
+      return;
     }
   }
 });
@@ -141,23 +144,30 @@ Guidelines:
  * Automatically creates a beautifully organized Google Document in the user's Drive.
  * Expects 'Authorization' header containing bearer Google OAuth token.
  */
-router.post("/google-doc", async (req: Request, res: Response): Promise<void> => {
+// Create and open a blank Google Doc (no proposal insertion required)
+router.post("/google-doc/blank", async (req: Request, res: Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-       res.status(401).json({ success: false, error: "Google OAuth Access Token is required via 'Authorization: Bearer <token>' header" });
-       return;
+      // No OAuth token provided: return a safe simulated URL so the UI always works.
+      setTimeout(() => {}, 0);
+      res.json({
+        success: true,
+        documentUrl: `https://docs.google.com/document/u/0/create?title=${encodeURIComponent(req.body?.documentTitle || "Career Agent Proposal")}`,
+        infoMessage: "Workspace token missing; opened a simulated blank Google Doc URL.",
+        simulated: true
+      });
+      return;
     }
 
     const token = authHeader.split(" ")[1];
-    const { documentTitle, proposalText } = req.body;
+    const { documentTitle } = req.body;
 
-    if (!documentTitle || !proposalText) {
-       res.status(400).json({ success: false, error: "documentTitle and proposalText are mandatory" });
-       return;
+    if (!documentTitle) {
+      res.status(400).json({ success: false, error: "documentTitle is mandatory" });
+      return;
     }
 
-    // 1. Send REST request to Google Docs API to create the empty document
     const createDocRes = await fetch("https://docs.googleapis.com/v1/documents", {
       method: "POST",
       headers: {
@@ -175,7 +185,68 @@ router.post("/google-doc", async (req: Request, res: Response): Promise<void> =>
     const docData = await createDocRes.json();
     const documentId = docData.documentId;
 
-    // 2. Append the generated HTML/Markdown content to the document
+    res.json({
+      success: true,
+      documentId,
+      documentUrl: `https://docs.google.com/document/d/${documentId}/edit`,
+      infoMessage: "Successfully created a blank Google Doc in your Workspace."
+    });
+  } catch (error: any) {
+    console.error("Google Doc (blank) automation error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to automatically provision blank Google Document",
+      details: error.message
+    });
+  }
+});
+
+// Create and populate a Google Doc with the proposal text
+// Supports doc reuse: if documentId is provided, it will only batchUpdate that doc.
+router.post("/google-doc", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+       res.status(401).json({ success: false, error: "Google OAuth Access Token is required via 'Authorization: Bearer <token>' header" });
+       return;
+    }
+
+    const token = authHeader.split(" ")[1];
+    const { documentTitle, documentId: incomingDocumentId, proposalText } = req.body;
+
+    if (!proposalText) {
+       res.status(400).json({ success: false, error: "proposalText is mandatory" });
+       return;
+    }
+
+    let documentId: string | undefined = incomingDocumentId;
+
+    // If no docId was provided, create a new one.
+    if (!documentId) {
+      if (!documentTitle) {
+        res.status(400).json({ success: false, error: "documentTitle is mandatory when documentId is not provided" });
+        return;
+      }
+
+      const createDocRes = await fetch("https://docs.googleapis.com/v1/documents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ title: documentTitle })
+      });
+
+      if (!createDocRes.ok) {
+        const errDetail = await createDocRes.text();
+        throw new Error(`Google API responded with error during creation: ${errDetail}`);
+      }
+
+      const docData = await createDocRes.json();
+      documentId = docData.documentId;
+    }
+
+    // Append the generated content to the (existing or newly created) document.
     const updateDocRes = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
       method: "POST",
       headers: {
@@ -203,7 +274,9 @@ router.post("/google-doc", async (req: Request, res: Response): Promise<void> =>
       success: true,
       documentId,
       documentUrl: `https://docs.google.com/document/d/${documentId}/edit`,
-      infoMessage: "Successfully drafted Google Doc directly in your Workspace folder!"
+      infoMessage: incomingDocumentId
+        ? "Successfully populated existing Google Doc with proposal text!"
+        : "Successfully drafted a new Google Doc directly in your Workspace folder!"
     });
   } catch (error: any) {
     console.error("Agent 3 (Google Doc Automation) Error:", error);
@@ -335,7 +408,7 @@ router.post("/generate-asset", validateSessionHeader, async (req: Request, res: 
       });
 
       if (response && response.generatedImages && response.generatedImages.length > 0) {
-        base64Bytes = response.generatedImages[0].image.imageBytes;
+        base64Bytes = response.generatedImages[0].image?.imageBytes || "";
       } else {
         throw new Error("No image bytes returned in the primary request");
       }
@@ -355,7 +428,7 @@ router.post("/generate-asset", validateSessionHeader, async (req: Request, res: 
       });
 
       if (fallbackResponse && fallbackResponse.generatedImages && fallbackResponse.generatedImages.length > 0) {
-        base64Bytes = fallbackResponse.generatedImages[0].image.imageBytes;
+        base64Bytes = fallbackResponse.generatedImages[0].image?.imageBytes || "";
       } else {
         throw new Error("No image bytes returned in fallback engine request");
       }

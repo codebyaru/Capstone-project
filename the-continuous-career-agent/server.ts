@@ -11,6 +11,7 @@ import apiRouter from "./server/routes/api.js";
 import { antigravityOrchestratorMiddleware } from "./config/antigravity.config.js";
 
 // Load local development variables if available
+dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 async function startServer() {
