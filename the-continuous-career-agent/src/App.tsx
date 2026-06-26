@@ -195,9 +195,10 @@ export default function App() {
       }
 
       if (tokenToUse) {
-        sessionStorage.setItem("google_oauth_token", tokenToUse);
+        localStorage.setItem("google_oauth_token", tokenToUse);
         setOauthToken(tokenToUse);
         showNotification("Google authenticated! Workspace integration enabled.", "success");
+
       } else {
         console.warn("⚠️ No OAuth token returned from Google Sign-In. Check OAuth consent screen.");
         showNotification("Sign-in successful, but Google Workspace integration unavailable. Please reauthorize.", "warning");
@@ -287,11 +288,12 @@ export default function App() {
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   
   useEffect(() => {
-    const savedOauth = sessionStorage.getItem("google_oauth_token");
+    const savedOauth = localStorage.getItem("google_oauth_token");
     if (savedOauth) {
       setOauthToken(savedOauth);
     }
   }, []);
+
   
   // Toast notifications
   const [alertInfo, setAlertInfo] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -489,7 +491,9 @@ export default function App() {
       }
 
       console.log("📄 Starting Google Docs creation...");
-      console.log("✅ OAuth Token present:", oauthToken.substring(0, 20) + "...");
+      // Token is intentionally not logged (security). Presence/length only if needed.
+      console.log("✅ OAuth token present:", oauthToken ? "yes" : "no");
+
       console.log("✅ Proposal text length:", proposalText.length, "characters");
 
 
@@ -746,19 +750,24 @@ export default function App() {
             </button>
           )}
 
+          {/* OAuth integration status (token is never rendered in the UI) */}
           <div className="hidden md:flex items-center bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5 gap-2 text-xs">
             <Lock size={12} className="text-slate-400" />
-            <input 
-              id="google-workspace-token-input"
-              type="password" 
-              placeholder="Google Workspace Token"
-              value={oauthToken}
-              onChange={(e) => setOauthToken(e.target.value)}
-              className="bg-transparent text-slate-200 placeholder-slate-500 text-[11px] font-mono focus:outline-none w-40"
-              title="Enter your Access Token to interface with Gmail/Docs APIs directly"
-            />
-            <span className="text-[10px] bg-indigo-950 text-indigo-400 rounded px-1.5 font-mono border border-indigo-900/30">OAuth</span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                oauthToken
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                  : "bg-amber-500/10 text-amber-400 border border-amber-500/15"
+              }`}
+              title="Google Workspace integration status"
+            >
+              {oauthToken ? "Workspace connected" : "Workspace not connected"}
+            </span>
+            <span className="text-[10px] bg-indigo-950 text-indigo-400 rounded px-1.5 font-mono border border-indigo-900/30">
+              OAuth
+            </span>
           </div>
+
 
           {!profile && (
             <button
@@ -1374,7 +1383,7 @@ export default function App() {
                         <div className="p-6 bg-slate-950/70 border-b border-slate-850">
                           <div className="bg-slate-900 border border-slate-850 rounded-xl p-5 font-mono text-xs text-slate-300 leading-relaxed min-h-[340px] max-h-[460px] overflow-y-auto whitespace-pre-wrap select-text selection:bg-indigo-500">
                             {isGeneratingProposal ? (
-                              <div className="h-full min-h-[280px] flex flex-col items-center justify-center gap-3">
+                              <div className="h-full min-h-70 flex flex-col items-center justify-center gap-3">
                                 <RefreshCw size={24} className="text-teal-400 animate-spin" />
                                 <span className="text-slate-400 text-xs font-mono">Formulating custom technical proposal content...</span>
                               </div>

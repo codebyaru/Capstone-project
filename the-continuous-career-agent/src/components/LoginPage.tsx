@@ -50,7 +50,7 @@ export default function LoginPage({ onGoogleSignIn, onSandboxBypass }: LoginPage
             initial={{ opacity: 0, scale: 0.8, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 items-center justify-center shadow-2xl shadow-indigo-500/10 mb-2 border border-indigo-400/25"
+            className="inline-flex w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-500 to-purple-600 items-center justify-center shadow-2xl shadow-indigo-500/10 mb-2 border border-indigo-400/25"
           >
             <Layers size={22} className="text-white" />
           </motion.div>

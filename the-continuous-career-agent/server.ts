@@ -10,11 +10,18 @@ import { createServer as createViteServer } from "vite";
 import apiRouter from "./server/routes/api.js";
 import { antigravityOrchestratorMiddleware } from "./config/antigravity.config.js";
 
-// Load local development variables if available
-dotenv.config({ path: ".env.local" });
+// Load local development variables if available (use absolute path so it works regardless of cwd)
+dotenv.config({ path: path.join(process.cwd(), ".env.local") });
+// Also load default .env if present
 dotenv.config();
 
+
 async function startServer() {
+  // Startup sanity check for required env vars
+  if (!process.env.SESSION_SECRET) {
+    console.warn("[WARN] SESSION_SECRET is not set. Session token encryption/decryption will fail.");
+  }
+
   const app = express();
   const PORT = 3000;
 

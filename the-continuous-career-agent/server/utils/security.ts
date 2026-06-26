@@ -7,20 +7,38 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
 // Derived key for AES-256-CBC encryption/decryption of session tokens.
-const SECRET_SEED = process.env.SESSION_SECRET || "ContinuousCareerSessionSecureKey2026@!";
-const ENCRYPTION_KEY = crypto.createHash("sha256").update(SECRET_SEED).digest(); // 32 bytes
-const IV_LENGTH = 16; // 16 bytes for AES
+// SECURITY: do NOT use a hardcoded default secret. Require SESSION_SECRET in production.
+function getSecretSeed() {
+  const secret = process.env.SESSION_SECRET;
 
+  if (!secret) {
+    throw new Error("SESSION_SECRET is missing.");
+  }
+
+  return secret;
+}
+
+function getEncryptionKey() {
+  return crypto
+    .createHash("sha256")
+    .update(getSecretSeed())
+    .digest();
+}
+const IV_LENGTH = 16;
 /**
  * Encrypt a plain token or session payload.
  * Returns a secure base64-encoded encrypted token string containing the IV and the cipher text.
  */
 export function encryptToken(text: string): string {
   try {
+    const ENCRYPTION_KEY = getEncryptionKey();
+
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+
     let encrypted = cipher.update(text, "utf8", "base64");
     encrypted += cipher.final("base64");
+
     // Format: iv:encrypted_text
     return iv.toString("base64") + ":" + encrypted;
   } catch (err: any) {
@@ -34,15 +52,26 @@ export function encryptToken(text: string): string {
  */
 export function decryptToken(encryptedString: string): string {
   try {
+    const ENCRYPTION_KEY = getEncryptionKey();
+
     const parts = encryptedString.split(":");
+
     if (parts.length !== 2) {
       throw new Error("Invalid token format");
     }
+
     const iv = Buffer.from(parts[0], "base64");
     const encryptedText = parts[1];
-    const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+
+    const decipher = crypto.createDecipheriv(
+      "aes-256-cbc",
+      ENCRYPTION_KEY,
+      iv
+    );
+
     let decrypted = decipher.update(encryptedText, "base64", "utf8");
     decrypted += decipher.final("utf8");
+
     return decrypted;
   } catch (err: any) {
     console.error("Decryption error:", err.message);
@@ -139,27 +168,36 @@ export function validateSessionHeader(req: Request, res: Response, next: NextFun
        return;
     }
 
-    // Attempt token decryption or verify bearer token status
-    try {
-      // If the token matches basic encrypted format (containing split colon), verify decryption
-      if (rawToken.includes(":")) {
-        const decrypted = decryptToken(rawToken);
-        if (!decrypted) {
-          throw new Error("Null decryption output");
-        }
-        // Save decrypted metadata to req for downstream auditing
-        (req as any).sessionPayload = decrypted;
-      } else {
-        // Fallback for secure plaintext Bearer/OAuth integrations
-        (req as any).sessionPayload = "bearer_workspace_session";
-      }
-    } catch (decryptErr: any) {
-      console.warn("Secure token decryption check: token is used directly as validated key.");
-      // If token is direct OAuth bearer token, let it pass for backend Google API use
-      (req as any).sessionPayload = "direct_oauth_session";
+    // SECURITY: Only accept encrypted session tokens.
+    // If token cannot be decrypted, reject the request.
+    // NOTE: Google OAuth tokens for Workspace APIs should be validated via explicit backend logic,
+    // not by this session middleware.
+    if (!rawToken.includes(":")) {
+      res.status(401).json({
+        success: false,
+        error: "Invalid session token format. Encrypted token expected.",
+      });
+      return;
     }
 
-    next();
+    try {
+      const decrypted = decryptToken(rawToken);
+      if (!decrypted) {
+        res.status(401).json({
+          success: false,
+          error: "Invalid session token.",
+        });
+        return;
+      }
+      (req as any).sessionPayload = decrypted;
+      next();
+    } catch (decryptErr: any) {
+      res.status(401).json({
+        success: false,
+        error: "Session token decryption failed.",
+        details: decryptErr?.message || String(decryptErr)
+      });
+    }
   } catch (error: any) {
     res.status(401).json({
       success: false,
