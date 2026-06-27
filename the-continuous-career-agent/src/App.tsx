@@ -32,6 +32,7 @@ import InterviewerChat from "./components/InterviewerChat.tsx";
 import LoginPage from "./components/LoginPage.tsx";
 import LandingPage from "./components/LandingPage.tsx";
 import { UserCapabilityProfile, MatchRecommendation } from "./types/profile.ts";
+import { safeLocalStorage, safeSessionStorage } from "./lib/safeStorage.ts";
 
 export default function App() {
   const [activeStep, setActiveStep] = useState<"interview" | "matches" | "outreach">("interview");
@@ -70,7 +71,7 @@ export default function App() {
   // Theme configuration
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "dark";
-    const stored = window.localStorage.getItem("cc_agent_theme");
+    const stored = safeLocalStorage.getItem("cc_agent_theme");
     if (stored === "light" || stored === "dark") return stored;
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
@@ -78,7 +79,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     try {
-      window.localStorage.setItem("cc_agent_theme", theme);
+      safeLocalStorage.setItem("cc_agent_theme", theme);
     } catch (err) {
       console.warn("Unable to persist theme preference:", err);
     }
@@ -92,7 +93,7 @@ export default function App() {
         const res = await fetch("/api/profile/session-token");
         const data = await res.json();
         if (data.success && data.sessionToken) {
-          sessionStorage.setItem("encrypted_session_token", data.sessionToken);
+          safeSessionStorage.setItem("encrypted_session_token", data.sessionToken);
         }
       } catch (err) {
         console.error("Failed to fetch secure session token:", err);
@@ -126,7 +127,7 @@ export default function App() {
         if (data.profile && data.matches && data.matches.length > 0) {
           setActiveStep("matches");
         }
-        localStorage.setItem(`cc_agent_${userId}`, JSON.stringify(data));
+        safeLocalStorage.setItem(`cc_agent_${userId}`, JSON.stringify(data));
         return;
       }
     } catch (err: any) {
@@ -134,7 +135,7 @@ export default function App() {
     }
 
     try {
-      const localCached = localStorage.getItem(`cc_agent_${userId}`);
+      const localCached = safeLocalStorage.getItem(`cc_agent_${userId}`);
       if (localCached) {
         const data = JSON.parse(localCached);
         if (data.profile) setProfile(data.profile);
@@ -170,7 +171,7 @@ export default function App() {
     };
 
     try {
-      localStorage.setItem(`cc_agent_${userId}`, JSON.stringify(payload));
+      safeLocalStorage.setItem(`cc_agent_${userId}`, JSON.stringify(payload));
     } catch (localErr) {
       console.error("Failed storing local preview state:", localErr);
     }
@@ -203,7 +204,7 @@ export default function App() {
       setUser(result.user);
       showNotification(`Welcome back!`, "success");
       if (result.user?.uid) {
-        await loadUserDataFromFirestore(result.user.uid).catch(e => 
+        await loadUserDataFromFirestore(result.user.uid).catch(e =>
           console.warn("Silent firestore fetch error, using local fallback:", e)
         );
       }
@@ -228,12 +229,12 @@ export default function App() {
       try {
         const userDocRef = doc(db, "users", result.user.uid);
         await setDoc(userDocRef, {
-          profile: { 
-            fullName: fullName, 
-            email: email, 
-            primary_stack: [], 
-            deep_skills: [], 
-            ideal_roles: [] 
+          profile: {
+            fullName: fullName,
+            email: email,
+            primary_stack: [],
+            deep_skills: [],
+            ideal_roles: []
           },
           createdAt: new Date().toISOString()
         }, { merge: true });
@@ -262,6 +263,17 @@ export default function App() {
       setProposalText("");
       setActiveStep("interview");
       setShowLanding(true);
+
+      // Clear interview session cache
+      safeSessionStorage.removeItem("cc_interview_onboarded");
+      safeSessionStorage.removeItem("cc_interview_fullname");
+      safeSessionStorage.removeItem("cc_interview_email");
+      safeSessionStorage.removeItem("cc_interview_resume");
+      safeSessionStorage.removeItem("cc_interview_messages");
+      safeSessionStorage.removeItem("cc_interview_inputtext");
+      safeSessionStorage.removeItem("cc_interview_step");
+      safeSessionStorage.removeItem("cc_interview_finished");
+
       showNotification("Account disconnected.", "info");
     } catch (err: any) {
       console.error("Logout failed:", err);
@@ -275,7 +287,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + (sessionStorage.getItem("encrypted_session_token") || ""),
+          "Authorization": "Bearer " + (safeSessionStorage.getItem("encrypted_session_token") || ""),
         },
         body: JSON.stringify({ profile: targetProfile }),
       });
@@ -324,7 +336,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + (sessionStorage.getItem("encrypted_session_token") || ""),
+          "Authorization": "Bearer " + (safeSessionStorage.getItem("encrypted_session_token") || ""),
         },
         body: JSON.stringify({
           profile: currProfile,
@@ -361,6 +373,15 @@ export default function App() {
     setTimeout(() => setAlertInfo(null), 5000);
   };
 
+  const handleStepChange = (step: "interview" | "matches" | "outreach") => {
+    if (step !== "interview" && !profile) {
+      showNotification("Please complete the System Architect Profiler (Agent 1) interview first!", "error");
+      setActiveStep("interview");
+      return;
+    }
+    setActiveStep(step);
+  };
+
   const handleProfileGenerated = async (newProfile: UserCapabilityProfile, rawHistory: any[]) => {
     setProfile(newProfile);
     setChatHistory(rawHistory);
@@ -390,6 +411,17 @@ export default function App() {
     setSelectedMatch(null);
     setProposalText("");
     setActiveStep("interview");
+
+    // Clear interview session cache
+    safeSessionStorage.removeItem("cc_interview_onboarded");
+    safeSessionStorage.removeItem("cc_interview_fullname");
+    safeSessionStorage.removeItem("cc_interview_email");
+    safeSessionStorage.removeItem("cc_interview_resume");
+    safeSessionStorage.removeItem("cc_interview_messages");
+    safeSessionStorage.removeItem("cc_interview_inputtext");
+    safeSessionStorage.removeItem("cc_interview_step");
+    safeSessionStorage.removeItem("cc_interview_finished");
+
     showNotification("Pipeline indicators cleared.", "info");
   };
 
@@ -488,9 +520,9 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
-            onClick={toggleTheme} 
-            className="p-2 rounded-lg border cursor-pointer transition-colors" 
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg border cursor-pointer transition-colors"
             style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}
           >
             {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
@@ -544,7 +576,7 @@ export default function App() {
             </button>
           )}
 
-          <button 
+          <button
             onClick={handleSignOut}
             className="text-xs border border-transparent py-1.5 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer"
             style={{ backgroundColor: "var(--danger-soft)", color: "var(--danger)" }}
@@ -572,7 +604,7 @@ export default function App() {
             {/* Step 1 Tab button */}
             <button
               id="tab-step-1"
-              onClick={() => setActiveStep("interview")}
+              onClick={() => handleStepChange("interview")}
               className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
               style={
                 activeStep === "interview"
@@ -602,7 +634,7 @@ export default function App() {
             {/* Step 2 Tab button */}
             <button
               id="tab-step-2"
-              onClick={() => setActiveStep("matches")}
+              onClick={() => handleStepChange("matches")}
               className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
               style={
                 activeStep === "matches"
@@ -632,7 +664,7 @@ export default function App() {
             {/* Step 3 Tab button */}
             <button
               id="tab-step-3"
-              onClick={() => setActiveStep("outreach")}
+              onClick={() => handleStepChange("outreach")}
               className="flex items-start gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border"
               style={
                 activeStep === "outreach"
@@ -837,7 +869,7 @@ export default function App() {
                           </div>
 
                           <button
-                            onClick={() => setActiveStep("outreach")}
+                            onClick={() => handleStepChange("outreach")}
                             className="w-full font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-center cursor-pointer border border-transparent"
                             style={{ backgroundColor: "var(--accent)", color: "var(--accent-contrast)" }}
                           >
@@ -1069,5 +1101,4 @@ export default function App() {
       </footer>
     </div>
   );
-}
 }
